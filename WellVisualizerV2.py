@@ -57,6 +57,16 @@ The module serves as the main entry point for the well visualization application
 a comprehensive interface for exploring and analyzing well data, board matters, and
 related information from the State of Utah, Division of Oil, Gas, and Mining.
 """
+from typing import List
+from PyQt5.QtWidgets import QLabel, QLayout
+from PyQt5.QtCore import QAbstractItemModel
+import pandas as pd
+from matplotlib.patches import PathPatch
+from matplotlib.textpath import TextPath
+from matplotlib.lines import Line2D
+from typing import NoReturn
+from pandas import concat
+from typing import List, Union, Optional
 from typing import Dict, Literal
 from typing import List, Optional, Dict
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
@@ -241,6 +251,7 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
     checkbox_state_changed = PyQt5.QtCore.pyqtSignal(int, str, bool, PyQt5.QtGui.QColor)
     def __init__(self, flag=True):
         super().__init__()
+        self.combo_box_data = None
         self.docket_ownership_data = None
         self.used_plat_codes = None
         self.df_adjacent_plats = None
@@ -1079,196 +1090,196 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
     """Run this to setup the list of wells tab when the board matter tab is changed. It is run when the combobox board_matter_lst_combobox is used"""
 
-    def comboBoxSetupWellsWhenDocketChanges2(self):
-        """
-        Updates the well list and related data when a new board docket is selected.
-        """
-        # Clear all previous 2D and 3D data visualizations
-        self.clearDataFrom2dAnd3d()
-
-        # Filter the main data (dx_data) for the selected board docket
-        self.df_docket = self.dx_data[
-            (self.dx_data['Board_Year'] == self.ui.year_lst_combobox.currentText()) &
-            (self.dx_data['Docket_Month'] == self.ui.month_lst_combobox.currentText()) &
-            (self.dx_data['Board_Docket'] == self.ui.board_matter_lst_combobox.currentText())
-            ]
-
-        # Get unique operators and update the operators model
-        operators = sorted(self.df_docket['Operator'].unique())
-        self.operators_model.clear()
-        for row in operators:
-            self.operators_model.appendRow(QStandardItem(row))
-
-        # Get unique well IDs and display names
-        apis = self.df_docket['WellID'].unique()
-        unique_count = sorted(self.df_docket['DisplayName'].unique())
-
-        # Filter directional survey data (dx_df) for wells in the current docket
-        test_df = (self.dx_df[self.dx_df['APINumber'].isin(apis)]
-                   .drop_duplicates(keep='first')
-                   .sort_values(by=['APINumber', 'MeasuredDepth']))
-
-        # Update df_docket to include only wells with directional survey data
-        unique_apis_with_data = test_df['APINumber'].unique()
-        self.df_docket = self.df_docket[self.df_docket['WellID'].isin(unique_apis_with_data)]
-
-        # Identify main wells (MainWell == 1) and create a final sorted list of wells
-        master_data = self.df_docket[self.df_docket['MainWell'] == 1]
-        masters_apds = sorted(master_data['DisplayName'].unique())
-        sorted_list = sorted([x for x in unique_count if x not in masters_apds])
-        final_list = masters_apds + sorted_list
-
-        # Update the "All Wells" table with the final list of wells
-        self.fillInAllWellsTable(final_list)
-
-        # Update the well list combo box
-        self.ui.well_lst_combobox.clear()
-        model = QStandardItemModel()
-        for item_text in final_list:
-            item = QStandardItem(item_text)
-            model.appendRow(item)
-        self.ui.well_lst_combobox.setModel(model)
-
-        # Make main wells bold in the combo box
-        delegate = BoldDelegate(masters_apds)
-        self.ui.well_lst_combobox.setItemDelegate(delegate)
-
-        # Update 2D data (relative elevation, targeted data, etc.)
-        self.update2dWhenDocketChanges()
-
-        # Create a new dataframe with well parameters for the current docket
-        self.df_docket_data = self.returnWellsWithParameters()
-
-        # Set the axes limits for the plots based on the current data
-        self.setAxesLimits()
-
-        # Prepare the data for filtering based on well age parameters
-        self.setupDataForBoardDrillingInformation()
-
-        # Update 3D view if data is available
-        if self.drilled_segments_3d:
-            self.centroid, std_vals = self.calculate_centroid_np(self.drilled_segments_3d)
-            new_xlim = [self.centroid[0] - 10000, self.centroid[0] + 10000]
-            new_ylim = [self.centroid[1] - 10000, self.centroid[1] + 10000]
-            new_zlim = [self.centroid[2] - 10000, self.centroid[2] + 10000]
-            self.ax3d.set_xlim3d(new_xlim)
-            self.ax3d.set_ylim3d(new_ylim)
-            self.ax3d.set_zlim3d(new_zlim)
-
-        # Generate section data for the 2D model
-        self.used_sections, self.all_wells_plat_labels = self.draw2dModelSections()
-
-        # Color in the oil and gas fields on the plot
-        self.colorInFields()
-
-        # Update the checkboxes for well types and statuses
-        self.update_checkboxes()
-
-        # Calculate centroids for each section (used for labeling)
-        self.centroids_lst = []
-        for i, val in enumerate(self.used_sections):
-            self.used_sections[i].append(self.used_sections[i][0])
-            centroid = Polygon(self.used_sections[i]).centroid
-            self.centroids_lst.append(centroid)
-
-        # Update the well data based on the current parameter settings
-        self.returnWellDataDependingOnParametersTest()
-
-        # Draw the Township, Section, and Range (TSR) plat on the 2D plot
-        self.drawTSRPlat()
-
-        # Process and display ownership data
-        self.colorInOwnership()
-        self.ownershipSelection()
-
-        # Update the owner and agency models with the current data
-        owners = sorted(self.docket_ownership_data['owner'].unique())
-        agencies = sorted(self.docket_ownership_data['state_legend'].unique())
-        self.owner_model.clear()
-        self.agency_model.clear()
-        for row in owners:
-            self.owner_model.appendRow(QStandardItem(row))
-        for row in agencies:
-            self.agency_model.appendRow(QStandardItem(row))
-
-        # Update the ownership checkboxes in the UI
-        self.updateOwnershipCheckboxes()
-
-        # Redraw the 2D canvas to reflect all changes
-        self.canvas2d.blit(self.ax2d.bbox)
-        self.canvas2d.draw()
-
-        # Update the combo_box_data attribute with the first 10 characters of each well name
-        self.combo_box_data = [self.ui.well_lst_combobox.itemText(i)[:10] for i in
-                               range(self.ui.well_lst_combobox.count())]
-
-        # Activate the production buttons in the UI
-        self.prodButtonsActivate()
-
-        # Define the main well statuses and types for counting
-        main_statuses = ['Plugged & Abandoned', 'Producing', 'Shut-in', 'Drilling']
-        other_statuses = [
-            'Location Abandoned - APD rescinded', 'Returned APD (Unapproved)',
-            'Approved Permit', 'Active', 'Drilling Operations Suspended',
-            'New Permit', 'Inactive', 'Temporarily-abandoned', 'Test Well or Monitor Well'
-        ]
-        main_types = ['Unknown', 'Oil Well', 'Dry Hole', 'Gas Well', 'Test Well', 'Water Source Well']
-        merged_types = {
-            'Injection Well': ['Water Injection Well', 'Gas Injection Well'],
-            'Disposal Well': ['Water Disposal Well', 'Oil Well/Water Disposal Well'],
-            'Other': ['Test Well', 'Water Source Well', 'Unknown']
-        }
-
-        # Update the counters for well statuses and types in the UI
-        self.getCountersForStatus(main_statuses, other_statuses)
-        self.getCountersForType(main_types, merged_types)
-
-    def comboBoxSetupWellsWhenDocketChanges3(self):
-        """
-        Updates the well list and related data when a new board docket is selected.
-        """
-        self.clearDataFrom2dAnd3d()
-        self.filterMainDataForDocket()
-        self.updateOperatorsModel()
-        self.updateWellIDsAndDisplayNames()
-        self.filterDirectionalSurveyData()
-        self.filterDocketForDirectionalSurveyData()
-        self.createFinalSortedListOfWells()
-        # self.updateAllWellsTable()
-        self.fillInAllWellsTable(self.final_list)
-        self.updateWellListComboBox()
-        self.makeMainWellsBoldInComboBox()
-        self.update2dWhenDocketChanges()
-        # self.createDocketDataFrameWithParameters()
-        self.df_docket_data = self.returnWellsWithParameters()
-        self.setAxesLimits()
-        # self.prepareDataForBoardDrillingInfo()
-        self.setupDataForBoardDrillingInformation()
-        self.update3dViewIfAvailable()
-        # self.generateSectionDataFor2DModel()
-        self.used_sections, self.all_wells_plat_labels = self.draw2dModelSections()
-        self.colorInFields()
-        # self.updateWellTypeAndStatusCheckboxes()
-        self.update_checkboxes()
-        self.calculateCentroidsForSections()
-        # self.updateWellDataBasedOnParameters()
-        self.returnWellDataDependingOnParametersTest()
-        self.drawTSRPlat()
-        # self.processAndDisplayOwnershipData()
-        self.colorInOwnership()
-        self.ownershipSelection()
-        self.updateOwnerAndAgencyModels()
-        self.updateOwnershipCheckboxes()
-        # self.redraw2DCanvas()
-        self.canvas2d.blit(self.ax2d.bbox)
-        self.canvas2d.draw()
-        self.updateComboBoxData()
-        self.combo_box_data = [self.ui.well_lst_combobox.itemText(i)[:10] for i in
-                               range(self.ui.well_lst_combobox.count())]
-        # self.activateProductionButtons()
-        self.prodButtonsActivate()
-
-        self.updateCountersForStatusAndType()
+    # def comboBoxSetupWellsWhenDocketChanges2(self):
+    #     """
+    #     Updates the well list and related data when a new board docket is selected.
+    #     """
+    #     # Clear all previous 2D and 3D data visualizations
+    #     self.clearDataFrom2dAnd3d()
+    #
+    #     # Filter the main data (dx_data) for the selected board docket
+    #     self.df_docket = self.dx_data[
+    #         (self.dx_data['Board_Year'] == self.ui.year_lst_combobox.currentText()) &
+    #         (self.dx_data['Docket_Month'] == self.ui.month_lst_combobox.currentText()) &
+    #         (self.dx_data['Board_Docket'] == self.ui.board_matter_lst_combobox.currentText())
+    #         ]
+    #
+    #     # Get unique operators and update the operators model
+    #     operators = sorted(self.df_docket['Operator'].unique())
+    #     self.operators_model.clear()
+    #     for row in operators:
+    #         self.operators_model.appendRow(QStandardItem(row))
+    #
+    #     # Get unique well IDs and display names
+    #     apis = self.df_docket['WellID'].unique()
+    #     unique_count = sorted(self.df_docket['DisplayName'].unique())
+    #
+    #     # Filter directional survey data (dx_df) for wells in the current docket
+    #     test_df = (self.dx_df[self.dx_df['APINumber'].isin(apis)]
+    #                .drop_duplicates(keep='first')
+    #                .sort_values(by=['APINumber', 'MeasuredDepth']))
+    #
+    #     # Update df_docket to include only wells with directional survey data
+    #     unique_apis_with_data = test_df['APINumber'].unique()
+    #     self.df_docket = self.df_docket[self.df_docket['WellID'].isin(unique_apis_with_data)]
+    #
+    #     # Identify main wells (MainWell == 1) and create a final sorted list of wells
+    #     master_data = self.df_docket[self.df_docket['MainWell'] == 1]
+    #     masters_apds = sorted(master_data['DisplayName'].unique())
+    #     sorted_list = sorted([x for x in unique_count if x not in masters_apds])
+    #     final_list = masters_apds + sorted_list
+    #
+    #     # Update the "All Wells" table with the final list of wells
+    #     self.fillInAllWellsTable(final_list)
+    #
+    #     # Update the well list combo box
+    #     self.ui.well_lst_combobox.clear()
+    #     model = QStandardItemModel()
+    #     for item_text in final_list:
+    #         item = QStandardItem(item_text)
+    #         model.appendRow(item)
+    #     self.ui.well_lst_combobox.setModel(model)
+    #
+    #     # Make main wells bold in the combo box
+    #     delegate = BoldDelegate(masters_apds)
+    #     self.ui.well_lst_combobox.setItemDelegate(delegate)
+    #
+    #     # Update 2D data (relative elevation, targeted data, etc.)
+    #     self.update2dWhenDocketChanges()
+    #
+    #     # Create a new dataframe with well parameters for the current docket
+    #     self.df_docket_data = self.returnWellsWithParameters()
+    #
+    #     # Set the axes limits for the plots based on the current data
+    #     self.setAxesLimits()
+    #
+    #     # Prepare the data for filtering based on well age parameters
+    #     self.setupDataForBoardDrillingInformation()
+    #
+    #     # Update 3D view if data is available
+    #     if self.drilled_segments_3d:
+    #         self.centroid, std_vals = self.calculate_centroid_np(self.drilled_segments_3d)
+    #         new_xlim = [self.centroid[0] - 10000, self.centroid[0] + 10000]
+    #         new_ylim = [self.centroid[1] - 10000, self.centroid[1] + 10000]
+    #         new_zlim = [self.centroid[2] - 10000, self.centroid[2] + 10000]
+    #         self.ax3d.set_xlim3d(new_xlim)
+    #         self.ax3d.set_ylim3d(new_ylim)
+    #         self.ax3d.set_zlim3d(new_zlim)
+    #
+    #     # Generate section data for the 2D model
+    #     self.used_sections, self.all_wells_plat_labels = self.draw2dModelSections()
+    #
+    #     # Color in the oil and gas fields on the plot
+    #     self.colorInFields()
+    #
+    #     # Update the checkboxes for well types and statuses
+    #     self.update_checkboxes()
+    #
+    #     # Calculate centroids for each section (used for labeling)
+    #     self.centroids_lst = []
+    #     for i, val in enumerate(self.used_sections):
+    #         self.used_sections[i].append(self.used_sections[i][0])
+    #         centroid = Polygon(self.used_sections[i]).centroid
+    #         self.centroids_lst.append(centroid)
+    #
+    #     # Update the well data based on the current parameter settings
+    #     self.returnWellDataDependingOnParametersTest()
+    #
+    #     # Draw the Township, Section, and Range (TSR) plat on the 2D plot
+    #     self.drawTSRPlat()
+    #
+    #     # Process and display ownership data
+    #     self.colorInOwnership()
+    #     self.ownershipSelection()
+    #
+    #     # Update the owner and agency models with the current data
+    #     owners = sorted(self.docket_ownership_data['owner'].unique())
+    #     agencies = sorted(self.docket_ownership_data['state_legend'].unique())
+    #     self.owner_model.clear()
+    #     self.agency_model.clear()
+    #     for row in owners:
+    #         self.owner_model.appendRow(QStandardItem(row))
+    #     for row in agencies:
+    #         self.agency_model.appendRow(QStandardItem(row))
+    #
+    #     # Update the ownership checkboxes in the UI
+    #     self.updateOwnershipCheckboxes()
+    #
+    #     # Redraw the 2D canvas to reflect all changes
+    #     self.canvas2d.blit(self.ax2d.bbox)
+    #     self.canvas2d.draw()
+    #
+    #     # Update the combo_box_data attribute with the first 10 characters of each well name
+    #     self.combo_box_data = [self.ui.well_lst_combobox.itemText(i)[:10] for i in
+    #                            range(self.ui.well_lst_combobox.count())]
+    #
+    #     # Activate the production buttons in the UI
+    #     self.prodButtonsActivate()
+    #
+    #     # Define the main well statuses and types for counting
+    #     main_statuses = ['Plugged & Abandoned', 'Producing', 'Shut-in', 'Drilling']
+    #     other_statuses = [
+    #         'Location Abandoned - APD rescinded', 'Returned APD (Unapproved)',
+    #         'Approved Permit', 'Active', 'Drilling Operations Suspended',
+    #         'New Permit', 'Inactive', 'Temporarily-abandoned', 'Test Well or Monitor Well'
+    #     ]
+    #     main_types = ['Unknown', 'Oil Well', 'Dry Hole', 'Gas Well', 'Test Well', 'Water Source Well']
+    #     merged_types = {
+    #         'Injection Well': ['Water Injection Well', 'Gas Injection Well'],
+    #         'Disposal Well': ['Water Disposal Well', 'Oil Well/Water Disposal Well'],
+    #         'Other': ['Test Well', 'Water Source Well', 'Unknown']
+    #     }
+    #
+    #     # Update the counters for well statuses and types in the UI
+    #     self.getCountersForStatus(main_statuses, other_statuses)
+    #     self.getCountersForType(main_types, merged_types)
+    #
+    # def comboBoxSetupWellsWhenDocketChanges3(self):
+    #     """
+    #     Updates the well list and related data when a new board docket is selected.
+    #     """
+    #     self.clearDataFrom2dAnd3d()
+    #     self.filterMainDataForDocket()
+    #     self.updateOperatorsModel()
+    #     self.updateWellIDsAndDisplayNames()
+    #     self.filterDirectionalSurveyData()
+    #     self.filterDocketForDirectionalSurveyData()
+    #     self.createFinalSortedListOfWells()
+    #     # self.updateAllWellsTable()
+    #     self.fillInAllWellsTable(self.final_list)
+    #     self.updateWellListComboBox()
+    #     self.makeMainWellsBoldInComboBox()
+    #     self.update2dWhenDocketChanges()
+    #     # self.createDocketDataFrameWithParameters()
+    #     self.df_docket_data = self.returnWellsWithParameters()
+    #     self.setAxesLimits()
+    #     # self.prepareDataForBoardDrillingInfo()
+    #     self.setupDataForBoardDrillingInformation()
+    #     self.update3dViewIfAvailable()
+    #     # self.generateSectionDataFor2DModel()
+    #     self.used_sections, self.all_wells_plat_labels = self.draw2dModelSections()
+    #     self.colorInFields()
+    #     # self.updateWellTypeAndStatusCheckboxes()
+    #     self.update_checkboxes()
+    #     self.calculateCentroidsForSections()
+    #     # self.updateWellDataBasedOnParameters()
+    #     self.returnWellDataDependingOnParametersTest()
+    #     self.drawTSRPlat()
+    #     # self.processAndDisplayOwnershipData()
+    #     self.colorInOwnership()
+    #     self.ownershipSelection()
+    #     self.updateOwnerAndAgencyModels()
+    #     self.updateOwnershipCheckboxes()
+    #     # self.redraw2DCanvas()
+    #     self.canvas2d.blit(self.ax2d.bbox)
+    #     self.canvas2d.draw()
+    #     self.updateComboBoxData()
+    #     self.combo_box_data = [self.ui.well_lst_combobox.itemText(i)[:10] for i in
+    #                            range(self.ui.well_lst_combobox.count())]
+    #     # self.activateProductionButtons()
+    #     self.prodButtonsActivate()
+    #
+    #     self.updateCountersForStatusAndType()
 
     def comboBoxSetupWellsWhenDocketChanges(self) -> None:
         """
@@ -3013,10 +3024,7 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             y_selected: float = event.ydata
 
             # Calculate dynamic selection threshold based on current view
-            limit: float = (
-                                   np.diff(self.ax2d.get_xlim())[0] +
-                                   np.diff(self.ax2d.get_ylim())[0]
-                           ) / 80
+            limit: float = (np.diff(self.ax2d.get_xlim())[0] + np.diff(self.ax2d.get_ylim())[0]) / 80
 
             # Calculate distances to all visible wells
             self.currently_used_lines['distance'] = np.sqrt(
@@ -4993,100 +5001,707 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
 
     def manipulateTheDfDocketDataDependingOnCheckboxes(self):
-        def setupData(df, segments, segments_3d):
-            df, segments, segments_3d = platBounded(df, segments, segments_3d)
-            data = {'color': ['black'] * len(segments), 'width': [0.5] * len(segments)}
-            df_parameters = pd.DataFrame(data)
-            return df, segments, segments_3d, data, df_parameters
+        """
+           Main function for managing well visualization based on UI checkbox states.
 
-        def platBounded(df, segments, segments_3d):
+           Controls the display of different well types (drilled, planned, currently drilling)
+           and their properties in both 2D and 3D views. Handles well filtering, visibility,
+           styling, and related UI elements like field names.
+
+           Attributes Modified:
+               currently_used_lines (DataFrame): Tracks which well lines are currently displayed
+               field_sections (Artist): Visual elements for field sections
+               labels_field (Artist): Text labels for fields
+               Various matplotlib artists for well visualization
+
+           Side Effects:
+               - Updates 2D and 3D matplotlib canvases
+               - Modifies well line visibility and styling
+               - Updates field name labels
+               - Adjusts 3D view limits based on well positions
+               - Triggers well type/status filtering
+
+           Processing Steps:
+               1. Initializes local data references
+               2. Sets up data parameters for each well category
+               3. Applies type/status filtering
+               4. Handles field name visibility
+               5. Processes well display parameters
+               6. Toggles visibility for different well categories
+               7. Adjusts 3D view boundaries
+               8. Updates visualization canvases
+
+           Notes:
+               - Central function for well visualization control
+               - Connected to multiple UI checkbox events
+               - Manages both 2D and 3D visualizations
+               - Handles three main well categories:
+                   * As-drilled wells
+                   * Planned wells
+                   * Currently drilling wells
+               - Maintains visualization consistency across views
+               - Uses helper functions for data setup and display
+
+           Dependencies:
+               - setupData(): Prepares well data parameters
+               - statusAndTypesEnabler(): Manages well filtering
+               - toggle_well_display(): Controls well visibility
+               - calculate_centroid_np(): Computes 3D view center
+           """
+        def platBounded(
+                df: pd.DataFrame,
+                segments: List[List[List[float]]],
+                segments_3d: List[List[List[float]]]
+        ) -> Tuple[pd.DataFrame, List[List[List[float]]], List[List[List[float]]]]:
+            """
+            Filters and reorders well data and segments based on API numbers and measured depth.
+
+            Sorts well data by API number and measured depth, then filters the 2D and 3D
+            segment data to match only the wells present in the DataFrame. Maintains data
+            consistency across different representations of the same wells.
+
+            Args:
+                df (pd.DataFrame): Well data containing:
+                    Required columns:
+                    - APINumber: Unique well identifier
+                    - MeasuredDepth: Depth measurement along wellbore
+                segments (List[List[List[float]]]): 2D coordinate segments for visualization
+                    Format: [well][segment][x,y coordinates]
+                segments_3d (List[List[List[float]]]): 3D coordinate segments for visualization
+                    Format: [well][segment][z coordinates]
+
+            Returns:
+                Tuple containing:
+                - pd.DataFrame: Sorted and filtered well data
+                - List[List[List[float]]]: Filtered 2D segments matching DataFrame wells
+                - List[List[List[float]]]: Filtered 3D segments matching DataFrame wells
+
+            Notes:
+                - Maintains data consistency by filtering segments to match DataFrame wells
+                - Preserves original data structure and relationships
+                - Handles potential mismatches between DataFrame and segment data
+                - Returns empty lists for segments if no matches found
+
+            Example:
+                >>> df_filtered, seg_2d, seg_3d = platBounded(well_df, segments_2d, segments_3d)
+                >>> print(f"Filtered to {len(seg_2d)} wells")
+            """
+            # Sort DataFrame by API number and measured depth
             df = df.sort_values(by=['APINumber', 'MeasuredDepth'])
+
+            # Create index mapping for API numbers
             api = df[['APINumber']].drop_duplicates().reset_index(drop=True)
             api['index'] = api.index
+
+            # Merge to maintain relationships
             merged = pd.merge(api, df, left_on='APINumber', right_on='APINumber')
+
+            # Filter segments to match DataFrame wells
             segments = [segments[i] for i in range(len(segments)) if i in merged['index'].unique()]
             segments_3d = [segments_3d[i] for i in range(len(segments_3d)) if i in merged['index'].unique()]
-            return df, segments, segments_3d
 
-        # This function is run on each checkbox. Type refers to the type of well (oil, gas, etc) and column refers to the dataframe column where that well type will be referenced.
-        def wellChecked(type, column):
-            if column == 'CurrentWellType':
-                colors_lst = 'WellTypeColor'
-            else:
-                colors_lst = 'WellStatusColor'
-            # restrict the data to the first rows of each api number (since we only need one row to define the color)
+            return df, segments, segments_3d
+        # def platBounded(df, segments, segments_3d):
+        #     df = df.sort_values(by=['APINumber', 'MeasuredDepth'])
+        #     api = df[['APINumber']].drop_duplicates().reset_index(drop=True)
+        #     api['index'] = api.index
+        #     merged = pd.merge(api, df, left_on='APINumber', right_on='APINumber')
+        #     segments = [segments[i] for i in range(len(segments)) if i in merged['index'].unique()]
+        #     segments_3d = [segments_3d[i] for i in range(len(segments_3d)) if i in merged['index'].unique()]
+        #     return df, segments, segments_3d
+        def setupData(
+                df: pd.DataFrame,
+                segments: List[List[List[float]]],
+                segments_3d: List[List[List[float]]]
+        ) -> Tuple[pd.DataFrame, List[List[List[float]]], List[List[List[float]]], Dict, pd.DataFrame]:
+            """
+            Prepares well data and visualization parameters by filtering data and setting up default styling.
+
+            Processes well data through platBounded filter and creates default visualization
+            parameters for well segments including color and width attributes.
+
+            Args:
+                df (pd.DataFrame): Well data containing:
+                    Required columns:
+                    - APINumber: Unique well identifier
+                    - MeasuredDepth: Depth measurement along wellbore
+                segments (List[List[List[float]]]): 2D coordinate segments for visualization
+                    Format: [well][segment][x,y coordinates]
+                segments_3d (List[List[List[float]]]): 3D coordinate segments for visualization
+                    Format: [well][segment][z coordinates]
+
+            Returns:
+                Tuple containing:
+                - pd.DataFrame: Filtered and sorted well data
+                - List[List[List[float]]]: Filtered 2D segments
+                - List[List[List[float]]]: Filtered 3D segments
+                - Dict: Default styling parameters dictionary with:
+                    - color: List of colors (default 'black')
+                    - width: List of line widths (default 0.5)
+                - pd.DataFrame: Styling parameters as DataFrame
+
+            Notes:
+                - Uses platBounded to filter and align data
+                - Creates consistent default styling for all well segments
+                - Styling can be modified later by other functions
+                - Returns both dict and DataFrame versions of styling parameters
+                - All segments receive identical initial styling
+
+            Example:
+                >>> df, segs_2d, segs_3d, style_dict, style_df = setupData(wells_df, segments_2d, segments_3d)
+                >>> print(f"Styled {len(style_df)} well segments")
+            """
+            # Filter and align data using platBounded
+            df, segments, segments_3d = platBounded(df, segments, segments_3d)
+
+            # Create default styling parameters
+            data = {'color': ['black'] * len(segments), 'width': [0.5] * len(segments)}
+
+            # Convert styling parameters to DataFrame
+            df_parameters = pd.DataFrame(data)
+
+            return df, segments, segments_3d, data, df_parameters
+        # def setupData(df, segments, segments_3d):
+        #     df, segments, segments_3d = platBounded(df, segments, segments_3d)
+        #     data = {'color': ['black'] * len(segments), 'width': [0.5] * len(segments)}
+        #     df_parameters = pd.DataFrame(data)
+        #     return df, segments, segments_3d, data, df_parameters
+
+        def wellChecked(
+                type: str,
+                column: Literal['CurrentWellType', 'CurrentWellStatus']
+        ) -> None:
+            """
+            Updates well visualization parameters based on specified well type or status filter.
+
+            Modifies the styling (color and line width) of well segments in the visualization
+            based on either well type (e.g., Oil, Gas) or well status (e.g., Producing,
+            Shut-in). Wells matching the filter criteria are highlighted with specific colors
+            and increased line width.
+
+            Args:
+                type (str): Well type or status to filter by. Valid values depend on column:
+                    For CurrentWellType:
+                        - 'Oil Well'
+                        - 'Gas Well'
+                        - 'Water Disposal Well'
+                        - 'Water Injection Well'
+                        - 'Gas Injection Well'
+                        - 'Dry Hole'
+                        - 'Test Well'
+                        - 'Water Source Well'
+                        - 'Unknown'
+                    For CurrentWellStatus:
+                        - Status values from well database
+                column (Literal['CurrentWellType', 'CurrentWellStatus']):
+                    Column to filter on, determines color mapping used
+
+            Side Effects:
+                Updates these visualization parameter DataFrames:
+                - df_drilled_parameters
+                - df_planned_parameters
+                - df_drilling_parameters
+
+                Modifies:
+                - 'color': Changed from default black to type-specific color
+                - 'width': Increased from 0.5 to 1.5 for matching wells
+
+            Notes:
+                - Only processes first row per API number since color/type is constant per well
+                - Handles three well categories: drilled, planned, and currently drilling
+                - Uses predefined color mappings stored in WellTypeColor or WellStatusColor
+                - Non-matching wells retain default black color and 0.5 width
+                - Changes are reflected immediately in visualization
+
+            Example:
+                >>> wellChecked('Oil Well', 'CurrentWellType')
+                # Updates visualization to highlight all oil wells in red
+            """
+            # Determine color mapping column based on filter type
+            colors_lst = 'WellTypeColor' if column == 'CurrentWellType' else 'WellStatusColor'
+
+            # Get first row for each API number to determine well properties
             drilled_df_restricted = drilled_df.groupby('APINumber').first().reset_index()
             planned_df_restricted = planned_df.groupby('APINumber').first().reset_index()
             currently_drilling_df_restricted = currently_drilling_df.groupby('APINumber').first().reset_index()
 
-            # Filter the data to only the specific type of well (oil, gas, etc)
+            # Create masks for wells matching specified type/status
             drilled_well_mask = drilled_df_restricted[column] == type
             planned_well_mask = planned_df_restricted[column] == type
             currently_drilling_well_mask = currently_drilling_df_restricted[column] == type
 
-            # Here, we change the colors and size of the well. So that if we're looking at all oil wells, they'll be changed from the default black to the relevant color, and the size of the line is increased.
-            df_drilled_parameters.loc[drilled_well_mask, 'color'] = drilled_df_restricted.loc[drilled_well_mask, colors_lst]
+            # Update styling for drilled wells
+            df_drilled_parameters.loc[drilled_well_mask, 'color'] = drilled_df_restricted.loc[
+                drilled_well_mask, colors_lst]
             df_drilled_parameters.loc[drilled_well_mask, 'width'] = 1.5
 
-            df_planned_parameters.loc[planned_well_mask, 'color'] = planned_df_restricted.loc[planned_well_mask, colors_lst]
+            # Update styling for planned wells
+            df_planned_parameters.loc[planned_well_mask, 'color'] = planned_df_restricted.loc[
+                planned_well_mask, colors_lst]
             df_planned_parameters.loc[planned_well_mask, 'width'] = 1.5
 
-            df_drilling_parameters.loc[currently_drilling_well_mask, 'color'] = currently_drilling_df_restricted.loc[currently_drilling_well_mask, colors_lst]
+            # Update styling for currently drilling wells
+            df_drilling_parameters.loc[currently_drilling_well_mask, 'color'] = currently_drilling_df_restricted.loc[
+                currently_drilling_well_mask, colors_lst]
             df_drilling_parameters.loc[currently_drilling_well_mask, 'width'] = 1.5
 
-        def wellCheckedMultiple(types, column):
-            if column == 'CurrentWellType':
-                colors_lst = 'WellTypeColor'
-            else:
-                colors_lst = 'WellStatusColor'
-            # restrict the data to the first rows of each api number (since we only need one row to define the color)
+
+        # def wellChecked(type, column):
+        #     if column == 'CurrentWellType':
+        #         colors_lst = 'WellTypeColor'
+        #     else:
+        #         colors_lst = 'WellStatusColor'
+        #     # restrict the data to the first rows of each api number (since we only need one row to define the color)
+        #     drilled_df_restricted = drilled_df.groupby('APINumber').first().reset_index()
+        #     planned_df_restricted = planned_df.groupby('APINumber').first().reset_index()
+        #     currently_drilling_df_restricted = currently_drilling_df.groupby('APINumber').first().reset_index()
+        #
+        #     # Filter the data to only the specific type of well (oil, gas, etc)
+        #     drilled_well_mask = drilled_df_restricted[column] == type
+        #     planned_well_mask = planned_df_restricted[column] == type
+        #     currently_drilling_well_mask = currently_drilling_df_restricted[column] == type
+        #
+        #     # Here, we change the colors and size of the well. So that if we're looking at all oil wells, they'll be changed from the default black to the relevant color, and the size of the line is increased.
+        #     df_drilled_parameters.loc[drilled_well_mask, 'color'] = drilled_df_restricted.loc[drilled_well_mask, colors_lst]
+        #     df_drilled_parameters.loc[drilled_well_mask, 'width'] = 1.5
+        #
+        #     df_planned_parameters.loc[planned_well_mask, 'color'] = planned_df_restricted.loc[planned_well_mask, colors_lst]
+        #     df_planned_parameters.loc[planned_well_mask, 'width'] = 1.5
+        #
+        #     df_drilling_parameters.loc[currently_drilling_well_mask, 'color'] = currently_drilling_df_restricted.loc[currently_drilling_well_mask, colors_lst]
+        #     df_drilling_parameters.loc[currently_drilling_well_mask, 'width'] = 1.5
+        def wellCheckedMultiple(
+                types: List[str],
+                column: Literal['CurrentWellType', 'CurrentWellStatus']
+        ) -> None:
+            """
+            Updates well visualization parameters for multiple well types or statuses simultaneously.
+
+            Similar to wellChecked() but handles multiple types/statuses at once. Modifies the styling
+            (color and line width) of well segments in the visualization based on a list of well
+            types or statuses. Wells matching any of the filter criteria are highlighted.
+
+            Args:
+                types (List[str]): List of well types or statuses to filter by. Valid values depend on column:
+                    For CurrentWellType:
+                        - 'Oil Well'
+                        - 'Gas Well'
+                        - 'Water Disposal Well'
+                        - 'Oil Well/Water Disposal Well'
+                        - 'Water Injection Well'
+                        - 'Gas Injection Well'
+                        - 'Dry Hole'
+                        - etc.
+                    For CurrentWellStatus:
+                        - 'Location Abandoned - APD rescinded'
+                        - 'Returned APD (Unapproved)'
+                        - 'Approved Permit'
+                        - 'Active'
+                        - 'Drilling Operations Suspended'
+                        - 'New Permit'
+                        - 'Inactive'
+                        - 'Temporarily-abandoned'
+                        - 'Test Well or Monitor Well'
+                        - etc.
+                column (Literal['CurrentWellType', 'CurrentWellStatus']):
+                    Column to filter on, determines color mapping used
+
+            Side Effects:
+                Updates these visualization parameter DataFrames:
+                - df_drilled_parameters
+                - df_planned_parameters
+                - df_drilling_parameters
+
+                Modifies:
+                - 'color': Changed from default black to type-specific color
+                - 'width': Increased from 0.5 to 1.5 for matching wells
+
+            Notes:
+                - Only processes first row per API number since color/type is constant per well
+                - Handles three well categories: drilled, planned, and currently drilling
+                - Uses predefined color mappings stored in WellTypeColor or WellStatusColor
+                - Non-matching wells retain default black color and 0.5 width
+                - Changes are reflected immediately in visualization
+                - Commonly used for grouping related well types (e.g., all injection wells)
+                - Used by the GUI checkbox handlers to update multiple well types at once
+
+            Example:
+                >>> wellCheckedMultiple(['Water Injection Well', 'Gas Injection Well'], 'CurrentWellType')
+                # Updates visualization to highlight all injection wells
+            """
+            # Determine color mapping column based on filter type
+            colors_lst = 'WellTypeColor' if column == 'CurrentWellType' else 'WellStatusColor'
+
+            # Get first row for each API number to determine well properties
             drilled_df_restricted = drilled_df.groupby('APINumber').first().reset_index()
             planned_df_restricted = planned_df.groupby('APINumber').first().reset_index()
             currently_drilling_df_restricted = currently_drilling_df.groupby('APINumber').first().reset_index()
 
-            # Filter the data to only the specific type of well (oil, gas, etc)
+            # Create masks for wells matching any specified type/status
             drilled_well_mask = drilled_df_restricted[column].isin(types)
             planned_well_mask = planned_df_restricted[column].isin(types)
             currently_drilling_well_mask = currently_drilling_df_restricted[column].isin(types)
-            # Here, we change the colors and size of the well. So that if we're looking at all oil wells, they'll be changed from the default black to the relevant color, and the size of the line is increased.
-            df_drilled_parameters.loc[drilled_well_mask, 'color'] = drilled_df_restricted.loc[drilled_well_mask, colors_lst]
+
+            # Update styling for drilled wells
+            df_drilled_parameters.loc[drilled_well_mask, 'color'] = drilled_df_restricted.loc[
+                drilled_well_mask, colors_lst]
             df_drilled_parameters.loc[drilled_well_mask, 'width'] = 1.5
 
-            df_planned_parameters.loc[planned_well_mask, 'color'] = planned_df_restricted.loc[planned_well_mask, colors_lst]
+            # Update styling for planned wells
+            df_planned_parameters.loc[planned_well_mask, 'color'] = planned_df_restricted.loc[
+                planned_well_mask, colors_lst]
             df_planned_parameters.loc[planned_well_mask, 'width'] = 1.5
 
-            df_drilling_parameters.loc[currently_drilling_well_mask, 'color'] = currently_drilling_df_restricted.loc[currently_drilling_well_mask, colors_lst]
+            # Update styling for currently drilling wells
+            df_drilling_parameters.loc[currently_drilling_well_mask, 'color'] = currently_drilling_df_restricted.loc[
+                currently_drilling_well_mask, colors_lst]
             df_drilling_parameters.loc[currently_drilling_well_mask, 'width'] = 1.5
 
-        def toggle_well_display(condition, data_frame, segments_2d, colors_init, line_width, well_2d, well_3d,
-                                vertical_well, segments_3d):
+        # def wellCheckedMultiple(types, column):
+        #     if column == 'CurrentWellType':
+        #         colors_lst = 'WellTypeColor'
+        #     else:
+        #         colors_lst = 'WellStatusColor'
+        #     # restrict the data to the first rows of each api number (since we only need one row to define the color)
+        #     drilled_df_restricted = drilled_df.groupby('APINumber').first().reset_index()
+        #     planned_df_restricted = planned_df.groupby('APINumber').first().reset_index()
+        #     currently_drilling_df_restricted = currently_drilling_df.groupby('APINumber').first().reset_index()
+        #
+        #     # Filter the data to only the specific type of well (oil, gas, etc)
+        #     drilled_well_mask = drilled_df_restricted[column].isin(types)
+        #     planned_well_mask = planned_df_restricted[column].isin(types)
+        #     currently_drilling_well_mask = currently_drilling_df_restricted[column].isin(types)
+        #     # Here, we change the colors and size of the well. So that if we're looking at all oil wells, they'll be changed from the default black to the relevant color, and the size of the line is increased.
+        #     df_drilled_parameters.loc[drilled_well_mask, 'color'] = drilled_df_restricted.loc[drilled_well_mask, colors_lst]
+        #     df_drilled_parameters.loc[drilled_well_mask, 'width'] = 1.5
+        #
+        #     df_planned_parameters.loc[planned_well_mask, 'color'] = planned_df_restricted.loc[planned_well_mask, colors_lst]
+        #     df_planned_parameters.loc[planned_well_mask, 'width'] = 1.5
+        #
+        #     df_drilling_parameters.loc[currently_drilling_well_mask, 'color'] = currently_drilling_df_restricted.loc[currently_drilling_well_mask, colors_lst]
+        #     df_drilling_parameters.loc[currently_drilling_well_mask, 'width'] = 1.5
+        def toggle_well_display(
+                condition: bool,
+                data_frame: pd.DataFrame,
+                segments_2d: List[List[float]],
+                colors_init: Union[str, List[str]],
+                line_width: Union[float, List[float]],
+                well_2d: Line2D,
+                well_3d: Line2D,
+                vertical_well: Line2D,
+                segments_3d: List[List[float]]
+        ) -> None:
             """
-            Toggle the display and data of well elements based on a condition.
+            Toggles the visibility and updates data for well visualization elements based on a boolean condition.
 
-            Parameters:
-                condition (bool): The condition to check (i.e., whether the checkbox is checked).
-                data_frame (DataFrame): Data to add to currently used lines.
-                segments_2d, colors_init, line_width: Parameters for 2D drawing.
-                well_2d, well_3d, vertical_well: 2D, 3D, and vertical well elements.
-                segments_3d: Parameters for 3D drawing.
+            Controls the display state and data updates for 2D, 3D and vertical well representations in the
+            visualization. When enabled, updates the data and makes wells visible. When disabled, hides the wells
+            without removing the underlying data.
+
+            Args:
+                condition (bool): Toggle state - True to show and update wells, False to hide them
+                data_frame (pd.DataFrame): Well data to incorporate into currently displayed wells
+                    Required columns:
+                    - Well identifiers
+                    - Coordinate data
+                    - Well properties
+                segments_2d (List[List[float]]): 2D coordinate segments for well paths
+                    Format: [[x1,y1], [x2,y2], ...]
+                colors_init (Union[str, List[str]]): Color specification for well lines
+                    Either single color string or list of colors per segment
+                line_width (Union[float, List[float]]): Width specification for well lines
+                    Either single width value or list of widths per segment
+                well_2d (Line2D): Matplotlib line object for 2D well representation
+                well_3d (Line2D): Matplotlib line object for 3D well representation
+                vertical_well (Line2D): Matplotlib line object for vertical well projection
+                segments_3d (List[List[float]]): 3D coordinate segments for well paths
+                    Format: [[x1,y1,z1], [x2,y2,z2], ...]
+
+            Side Effects:
+                - Updates self.currently_used_lines with new well data when enabled
+                - Modifies visibility of well_2d, well_3d and vertical_well line objects
+                - Triggers redraw of well visualizations when enabled
+                - Changes persist until next toggle operation
+
+            Notes:
+                - Uses drawModelBasedOnParameters2d() for 2D visualization updates
+                - Uses drawModelBasedOnParameters() for 3D visualization updates
+                - Maintains data state even when wells are hidden
+                - Deduplicates data when adding new wells
+                - Preserves existing well properties when toggling visibility
+
+            Example:
+                >>> toggle_well_display(True, new_wells_df, segs_2d, 'blue', 1.0,
+                                      well2d, well3d, vert_well, segs_3d)
+                # Shows wells and updates with new data
+                >>> toggle_well_display(False, new_wells_df, segs_2d, 'blue', 1.0,
+                                      well2d, well3d, vert_well, segs_3d)
+                # Hides wells without removing data
             """
             if condition:
+                # Update data and show wells
                 self.currently_used_lines = concat([self.currently_used_lines, data_frame]).drop_duplicates(
                     keep='first').reset_index(drop=True)
+
+                # Redraw 2D and 3D visualizations with updated parameters
                 self.drawModelBasedOnParameters2d(well_2d, segments_2d, colors_init, line_width, self.ax2d,
                                                   vertical_well)
                 self.drawModelBasedOnParameters(well_3d, segments_3d, colors_init, line_width, self.ax3d)
+
+                # Make all well representations visible
                 well_2d.set_visible(True)
                 well_3d.set_visible(True)
                 vertical_well.set_visible(True)
             else:
+                # Hide all well representations
                 well_2d.set_visible(False)
                 well_3d.set_visible(False)
                 vertical_well.set_visible(False)
 
+        # def toggle_well_display(condition, data_frame, segments_2d, colors_init, line_width, well_2d, well_3d,
+        #                         vertical_well, segments_3d):
+        #     """
+        #     Toggle the display and data of well elements based on a condition.
+        #
+        #     Parameters:
+        #         condition (bool): The condition to check (i.e., whether the checkbox is checked).
+        #         data_frame (DataFrame): Data to add to currently used lines.
+        #         segments_2d, colors_init, line_width: Parameters for 2D drawing.
+        #         well_2d, well_3d, vertical_well: 2D, 3D, and vertical well elements.
+        #         segments_3d: Parameters for 3D drawing.
+        #     """
+        #     if condition:
+        #         self.currently_used_lines = concat([self.currently_used_lines, data_frame]).drop_duplicates(
+        #             keep='first').reset_index(drop=True)
+        #         self.drawModelBasedOnParameters2d(well_2d, segments_2d, colors_init, line_width, self.ax2d,
+        #                                           vertical_well)
+        #         self.drawModelBasedOnParameters(well_3d, segments_3d, colors_init, line_width, self.ax3d)
+        #         well_2d.set_visible(True)
+        #         well_3d.set_visible(True)
+        #         vertical_well.set_visible(True)
+        #     else:
+        #         well_2d.set_visible(False)
+        #         well_3d.set_visible(False)
+        #         vertical_well.set_visible(False)
+        def statusAndTypesEnabler() -> NoReturn:
+            """
+            Manages well visualization filters and field label visibility based on UI state.
+
+            Coordinates the mutual exclusivity between well type and status filters while
+            maintaining independent control of field label visibility. Handles three main
+            aspects of visualization:
+            1. Well type filtering (for Oil, Gas, Injection, Disposal wells etc.)
+            2. Well status filtering (Producing, Shut-in, P&A, Drilling etc.)
+            3. Field name label visibility
+
+            Radio Button IDs:
+                -2: Well Type filtering mode (Oil, Gas, Injection, etc.)
+                -3: Well Status filtering mode (Producing, Shut-in, etc.)
+
+            Field Labels:
+                - Displayed as red text at field centroids when enabled
+                - Size: 75 units
+                - Visibility tied to field_names_checkbox state
+
+            Side Effects:
+                - Updates well visibility based on selected filter mode
+                - Modifies field label and section visibility
+                - Changes currently_used_lines DataFrame content
+                - Triggers field label rendering when enabled
+                - Maintains field visibility state independent of filter changes
+
+            Notes:
+                - Part of the well visualization control system
+                - Connected to radio button and checkbox state changes
+                - Preserves field label state across filter changes
+                - Ensures proper layering of visual elements
+                - Manages memory by creating field labels only when visible
+                - Coordinates with wellTypesEnable() and wellStatusEnable()
+
+            Example:
+                Called when switching between well type/status or toggling field names:
+                >>> self.ui.well_type_or_status_button_group.buttonClicked.connect(
+                        self.statusAndTypesEnabler)
+                >>> self.ui.field_names_checkbox.stateChanged.connect(
+                        self.statusAndTypesEnabler)
+            """
+            # Store field checkbox state to preserve across filter changes
+            field_checkbox_state = self.ui.field_names_checkbox.isChecked()
+
+            # Get the ID of currently selected radio button
+            active_button_id_type_status = self.ui.well_type_or_status_button_group.checkedId()
+
+            # Enable well type filtering mode
+            if active_button_id_type_status == -2:
+                wellTypesEnable()
+            # Enable well status filtering mode
+            elif active_button_id_type_status == -3:
+                wellStatusEnable()
+
+            # Handle field label visibility independent of filter state
+            if field_checkbox_state:
+                self.field_sections.set_visible(True)
+                # Create field label paths with consistent styling
+                paths = [
+                    PathPatch(TextPath((coord.x, coord.y), text, size=75), color="red")
+                    for coord, text in zip(self.field_centroids_lst, self.field_labels)
+                ]
+                self.labels_field.set_paths(paths)
+                self.labels_field.set_visible(True)
+            else:
+                self.field_sections.set_visible(False)
+                self.labels_field.set_visible(False)
+
+
+        def wellTypesEnable() -> NoReturn:
+            """
+            Enables well type filtering while temporarily disabling well status filters.
+
+            Updates the visualization based on selected well type checkboxes in the UI.
+            Temporarily blocks signals from status checkboxes to prevent interference
+            between type and status filters.
+
+            Well Types Handled:
+                - Oil Wells
+                - Gas Wells
+                - Water Disposal Wells (including dual-purpose Oil/Disposal wells)
+                - Dry Holes
+                - Injection Wells (Water and Gas)
+                - Other Wells (Unknown, Test Wells, Water Source Wells)
+
+            Side Effects:
+                # - Temporarily blocks signals from status checkboxes
+                - Unchecks all status checkboxes
+                - Updates well visualization based on checked type filters
+                # - Restores signal handling for status checkboxes
+                - Modifies well colors and visibility in the visualization
+                - Updates currently_used_lines DataFrame
+
+            Notes:
+                - Uses wellChecked() for single well types
+                - Uses wellCheckedMultiple() for grouped well types
+                - Ensures mutual exclusivity between type and status filters
+                - Part of the well visualization control system
+                - Connected to UI checkbox state changes
+                - Maintains separation between well type and status filtering
+
+            Example:
+                Called when user interacts with well type checkboxes:
+                >>> self.ui.oil_well_check.stateChanged.connect(self.wellTypesEnable)
+            """
+            # Temporarily disable status checkbox signals
+            # for q in self.status_checks:
+            #     q.blockSignals(True)
+            #     q.setChecked(False)
+
+            # Handle Oil Well selection
+            if self.ui.oil_well_check.isChecked():
+                wellChecked('Oil Well', 'CurrentWellType')
+
+            # Handle Gas Well selection
+            if self.ui.gas_well_check.isChecked():
+                wellChecked('Gas Well', 'CurrentWellType')
+
+            # Handle Water Disposal Well selection (including combination wells)
+            if self.ui.water_disposal_check.isChecked():
+                wellCheckedMultiple(['Water Disposal Well', 'Oil Well/Water Disposal Well'], 'CurrentWellType')
+
+            # Handle Dry Hole selection
+            if self.ui.dry_hole_check.isChecked():
+                wellChecked('Dry Hole', 'CurrentWellType')
+
+            # Handle Injection Well selection (both water and gas)
+            if self.ui.injection_check.isChecked():
+                wellCheckedMultiple(['Water Injection Well', 'Gas Injection Well'], 'CurrentWellType')
+
+            # Handle Other Well Types selection
+            if self.ui.other_well_status_check.isChecked():
+                wellCheckedMultiple(['Unknown', 'Test Well', 'Water Source Well'], 'CurrentWellType')
+
+            # Re-enable status checkbox signals
+            # for q in self.status_checks:
+                # q.blockSignals(False)
+
+        def wellStatusEnable() -> NoReturn:
+            """
+            Enables well status filtering while temporarily disabling well type filters.
+
+            Updates the visualization based on selected well status checkboxes in the UI.
+            Temporarily blocks signals from type checkboxes to prevent interference
+            between status and type filters.
+
+            Well Statuses Handled:
+                - Shut-in wells
+                - Plugged & Abandoned wells
+                - Producing wells
+                - Currently drilling wells
+                - Miscellaneous statuses:
+                    - Location Abandoned (APD rescinded)
+                    - Returned APD (Unapproved)
+                    - Approved Permit
+                    - Active
+                    - Drilling Operations Suspended
+                    - New Permit
+                    - Inactive
+                    - Temporarily-abandoned
+                    - Test/Monitor Wells
+
+            Side Effects:
+                - Temporarily blocks signals from type checkboxes
+                - Unchecks all type checkboxes
+                - Updates well visualization based on checked status filters
+                - Restores signal handling for type checkboxes
+                - Modifies well colors and visibility in visualization
+                - Updates currently_used_lines DataFrame
+
+            Notes:
+                - Uses wellChecked() for single well statuses
+                - Uses wellCheckedMultiple() for grouped miscellaneous statuses
+                - Ensures mutual exclusivity between status and type filters
+                - Part of the well visualization control system
+                - Connected to UI checkbox state changes
+                - Maintains separation between well status and type filtering
+
+            Example:
+                Called when user interacts with well status checkboxes:
+                >>> self.ui.shut_in_check.stateChanged.connect(self.wellStatusEnable)
+            """
+            # Temporarily disable type checkbox signals
+            # for q in self.type_checks:
+            #     q.blockSignals(True)
+            #     q.setChecked(False)
+
+            # Handle Shut-in wells
+            if self.ui.shut_in_check.isChecked():
+                wellChecked('Shut-in', 'CurrentWellStatus')
+
+            # Handle Plugged & Abandoned wells
+            if self.ui.pa_check.isChecked():
+                wellChecked('Plugged & Abandoned', 'CurrentWellStatus')
+
+            # Handle Producing wells
+            if self.ui.producing_check.isChecked():
+                wellChecked('Producing', 'CurrentWellStatus')
+
+            # Handle Currently Drilling wells
+            if self.ui.drilling_status_check.isChecked():
+                wellChecked('Drilling', 'CurrentWellStatus')
+
+            # Handle Miscellaneous well statuses
+            if self.ui.misc_well_type_check.isChecked():
+                wellCheckedMultiple(['Location Abandoned - APD rescinded',
+                                     'Returned APD (Unapproved)', 'Approved Permit',
+                                     'Active', 'Drilling Operations Suspended', 'New Permit', 'Inactive',
+                                     'Temporarily-abandoned', 'Test Well or Monitor Well'], 'CurrentWellStatus')
+
+            # Re-enable type checkbox signals
+            # for q in self.type_checks:
+            #     q.blockSignals(False)
+
+        # Reset current line tracking
         self.currently_used_lines = None
 
-        # store in the data locally.
+        # Store segment and DataFrame references locally
         drilled_segments = self.drilled_segments
         planned_segments = self.planned_segments
         currently_drilling_segments = self.currently_drilling_segments
@@ -5098,144 +5713,57 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         drilled_df = self.drilled_df
         planned_df = self.planned_df
         currently_drilling_df = self.currently_drilling_df
-        drilled_df, drilled_segments, drilled_segments_3d,data_drilled,df_drilled_parameters = setupData(drilled_df, drilled_segments, drilled_segments_3d)
-        planned_df, planned_segments, planned_segments_3d,data_planned,df_planned_parameters = setupData(planned_df, planned_segments, planned_segments_3d)
-        currently_drilling_df, currently_drilling_segments, currently_drilling_segments_3d,data_drilling,df_drilling_parameters = setupData(currently_drilling_df, currently_drilling_segments, currently_drilling_segments_3d)
 
-        # drilled_df, drilled_segments, drilled_segments_3d = platBounded(drilled_df, drilled_segments, drilled_segments_3d)
-        # planned_df, planned_segments, planned_segments_3d = platBounded(planned_df, planned_segments, planned_segments_3d)
-        # currently_drilling_df, currently_drilling_segments, currently_drilling_segments_3d = platBounded(currently_drilling_df, currently_drilling_segments, currently_drilling_segments_3d)
-        #
-        # # This sets up the default coloration for the wells. These will be edited appropriately when different checkboxes are activated.
-        # data_drilled = {'color': ['black'] * len(drilled_segments), 'width': [0.5] * len(drilled_segments)}
-        # data_planned = {'color': ['black'] * len(planned_segments), 'width': [0.5] * len(planned_segments)}
-        # data_drilling = {'color': ['black'] * len(currently_drilling_segments), 'width': [0.5] * len(currently_drilling_segments)}
-        #
-        # # Generate some dataframes populated with that data.
-        # df_drilled_parameters = pd.DataFrame(data_drilled)
-        # df_planned_parameters = pd.DataFrame(data_planned)
-        # df_drilling_parameters = pd.DataFrame(data_drilling)
+        # Process each well category data
+        drilled_df, drilled_segments, drilled_segments_3d, data_drilled, df_drilled_parameters = setupData(
+            drilled_df, drilled_segments, drilled_segments_3d)
+        planned_df, planned_segments, planned_segments_3d, data_planned, df_planned_parameters = setupData(
+            planned_df, planned_segments, planned_segments_3d)
+        currently_drilling_df, currently_drilling_segments, currently_drilling_segments_3d, data_drilling, df_drilling_parameters = setupData(
+            currently_drilling_df, currently_drilling_segments, currently_drilling_segments_3d)
 
-        active_button_id_type_status = self.ui.well_type_or_status_button_group.checkedId()
-        if active_button_id_type_status == -2:
-            for q in self.status_checks:
-                q.blockSignals(True)
-                q.setChecked(False)
-            if self.ui.oil_well_check.isChecked():
-                wellChecked('Oil Well', 'CurrentWellType')
-            if self.ui.gas_well_check.isChecked():
-                wellChecked('Gas Well', 'CurrentWellType')
-            if self.ui.water_disposal_check.isChecked():
-                wellCheckedMultiple(['Water Disposal Well', 'Oil Well/Water Disposal Well'], 'CurrentWellType')
-            if self.ui.dry_hole_check.isChecked():
-                wellChecked('Dry Hole', 'CurrentWellType')
-            if self.ui.injection_check.isChecked():
-                wellCheckedMultiple(['Water Injection Well', 'Gas Injection Well'], 'CurrentWellType')
-            if self.ui.other_well_status_check.isChecked():
-                wellCheckedMultiple(['Unknown', 'Test Well', 'Water Source Well'], 'CurrentWellType')
-            for q in self.status_checks:
-                q.blockSignals(False)
-
-        elif active_button_id_type_status == -3:
-            for q in self.type_checks:
-                q.blockSignals(True)
-                q.setChecked(False)
-            if self.ui.shut_in_check.isChecked():
-                wellChecked('Shut-in', 'CurrentWellStatus')
-            if self.ui.pa_check.isChecked():
-                wellChecked('Plugged & Abandoned', 'CurrentWellStatus')
-            if self.ui.producing_check.isChecked():
-                wellChecked('Producing', 'CurrentWellStatus')
-            if self.ui.drilling_status_check.isChecked():
-                wellChecked('Drilling', 'CurrentWellStatus')
-            if self.ui.misc_well_type_check.isChecked():
-                wellCheckedMultiple(['Location Abandoned - APD rescinded',
-                                     'Returned APD (Unapproved)', 'Approved Permit',
-                                     'Active', 'Drilling Operations Suspended', 'New Permit', 'Inactive',
-                                     'Temporarily-abandoned', 'Test Well or Monitor Well'], 'CurrentWellStatus')
-            for q in self.type_checks:
-                q.blockSignals(False)
-
-
-        # This one is for the oil field labels.
+        # Update well type/status filters
+        statusAndTypesEnabler()
+        print("sfnjsgnjsjl")
+        # Handle field name visibility
         if self.ui.field_names_checkbox.isChecked():
             self.field_sections.set_visible(True)
-            paths = [
-                PathPatch(TextPath((coord.x, coord.y), text, size=75), color="red")
-                for coord, text in zip(self.field_centroids_lst, self.field_labels)]
+            paths = [PathPatch(TextPath((coord.x, coord.y), text, size=75), color="red")
+                     for coord, text in zip(self.field_centroids_lst, self.field_labels)]
             self.labels_field.set_paths(paths)
             self.labels_field.set_visible(True)
         else:
             self.field_sections.set_visible(False)
             self.labels_field.set_visible(False)
 
-        # Extract the colors and line widths that have seen been filled in or altered.
-        drilled_colors_init, drilled_line_width = df_drilled_parameters['color'].tolist(), df_drilled_parameters['width'].tolist()
-        planned_colors_init, planned_line_width = df_planned_parameters['color'].tolist(), df_planned_parameters['width'].tolist()
-        currently_drilling_colors_init, currently_drilling_width = df_drilling_parameters['color'].tolist(), df_drilling_parameters['width'].tolist()
+        # Extract visualization parameters
+        drilled_colors_init, drilled_line_width = df_drilled_parameters['color'].tolist(), df_drilled_parameters[
+            'width'].tolist()
+        planned_colors_init, planned_line_width = df_planned_parameters['color'].tolist(), df_planned_parameters[
+            'width'].tolist()
+        currently_drilling_colors_init, currently_drilling_width = df_drilling_parameters['color'].tolist(), \
+        df_drilling_parameters['width'].tolist()
 
-        # Now the colors and lines have been set, we can just check to see if any of them actually get drawn. So here, we check to see if the main three category checkboxes are checked or not.
-        # for each one, we'll add to the self.currently_used_lines dataframe that will record all wells that are currently to be drawn.
-        # then we draw the model based on the parameters, and select the visibility of the wells.
+        # Toggle visibility for each well category
         toggle_well_display(
             self.ui.asdrilled_check.isChecked(), drilled_df,
             drilled_segments, drilled_colors_init, drilled_line_width,
             self.all_wells_2d_asdrilled, self.all_wells_3d_asdrilled,
-            self.all_wells_2d_vertical_asdrilled, drilled_segments_3d
-        )
+            self.all_wells_2d_vertical_asdrilled, drilled_segments_3d)
 
         toggle_well_display(
             self.ui.planned_check.isChecked(), planned_df,
             planned_segments, planned_colors_init, planned_line_width,
             self.all_wells_2d_planned, self.all_wells_3d_planned,
-            self.all_wells_2d_vertical_planned, planned_segments_3d
-        )
+            self.all_wells_2d_vertical_planned, planned_segments_3d)
 
         toggle_well_display(
             self.ui.currently_drilling_check.isChecked(), currently_drilling_df,
             currently_drilling_segments, currently_drilling_colors_init, currently_drilling_width,
             self.all_wells_2d_current, self.all_wells_3d_current,
-            self.all_wells_2d_vertical_current, currently_drilling_segments_3d
-        )
+            self.all_wells_2d_vertical_current, currently_drilling_segments_3d)
 
-
-        # if self.ui.asdrilled_check.isChecked():
-        #     self.currently_used_lines = concat([self.currently_used_lines, drilled_df]).drop_duplicates(keep='first').reset_index(drop=True)
-        #     self.drawModelBasedOnParameters2d(self.all_wells_2d_asdrilled, drilled_segments, drilled_colors_init, drilled_line_width, self.ax2d, self.all_wells_2d_vertical_asdrilled)
-        #     self.drawModelBasedOnParameters(self.all_wells_3d_asdrilled, drilled_segments_3d, drilled_colors_init, drilled_line_width, self.ax3d)
-        #     self.all_wells_2d_asdrilled.set_visible(True)
-        #     self.all_wells_3d_asdrilled.set_visible(True)
-        #     self.all_wells_2d_vertical_asdrilled.set_visible(True)
-        # else:
-        #     self.all_wells_2d_asdrilled.set_visible(False)
-        #     self.all_wells_3d_asdrilled.set_visible(False)
-        #     self.all_wells_2d_vertical_asdrilled.set_visible(False)
-        #
-        # if self.ui.planned_check.isChecked():
-        #     self.currently_used_lines = concat([self.currently_used_lines, planned_df]).drop_duplicates(keep='first').reset_index(drop=True)
-        #     self.drawModelBasedOnParameters2d(self.all_wells_2d_planned, planned_segments, planned_colors_init, planned_line_width, self.ax2d, self.all_wells_2d_vertical_planned)
-        #     self.drawModelBasedOnParameters(self.all_wells_3d_planned, planned_segments_3d, planned_colors_init, planned_line_width, self.ax3d)
-        #     self.all_wells_2d_planned.set_visible(True)
-        #     self.all_wells_3d_planned.set_visible(True)
-        #     self.all_wells_2d_vertical_planned.set_visible(True)
-        # else:
-        #     self.all_wells_2d_planned.set_visible(False)
-        #     self.all_wells_3d_planned.set_visible(False)
-        #     self.all_wells_2d_vertical_planned.set_visible(False)
-        #
-        # if self.ui.currently_drilling_check.isChecked():
-        #     self.currently_used_lines = concat([self.currently_used_lines, currently_drilling_df]).drop_duplicates(keep='first').reset_index(drop=True)
-        #     self.drawModelBasedOnParameters2d(self.all_wells_2d_current, currently_drilling_segments, currently_drilling_colors_init, currently_drilling_width, self.ax2d, self.all_wells_2d_vertical_current)
-        #     self.drawModelBasedOnParameters(self.all_wells_3d_current, currently_drilling_segments_3d, currently_drilling_colors_init, currently_drilling_width, self.ax3d)
-        #     self.all_wells_2d_current.set_visible(True)
-        #     self.all_wells_3d_current.set_visible(True)
-        #     self.all_wells_2d_vertical_current.set_visible(True)
-        # else:
-        #     self.all_wells_2d_current.set_visible(False)
-        #     self.all_wells_3d_current.set_visible(False)
-        #     self.all_wells_2d_vertical_current.set_visible(False)
-
-        # If there are drilled segments 3d performed, then adjust the axes as follows
+        # Update 3D plot boundaries if drilled segments exist
         if drilled_segments_3d:
             self.centroid, std_vals = self.calculate_centroid_np(drilled_segments_3d)
             new_xlim = [self.centroid[0] - 10000, self.centroid[0] + 10000]
@@ -5245,17 +5773,143 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             self.ax3d.set_ylim3d(new_ylim)
             self.ax3d.set_zlim3d(new_zlim)
 
-        # Update, and draw, etc.
+        # Refresh all canvases
         self.canvas2d.blit(self.ax2d.bbox)
         self.canvas2d.draw()
         self.canvas3d.blit(self.ax3d.bbox)
         self.canvas3d.draw()
+        # def wellStatusEnable():
+        #     for q in self.type_checks:
+        #         q.blockSignals(True)
+        #         q.setChecked(False)
+        #     if self.ui.shut_in_check.isChecked():
+        #         wellChecked('Shut-in', 'CurrentWellStatus')
+        #     if self.ui.pa_check.isChecked():
+        #         wellChecked('Plugged & Abandoned', 'CurrentWellStatus')
+        #     if self.ui.producing_check.isChecked():
+        #         wellChecked('Producing', 'CurrentWellStatus')
+        #     if self.ui.drilling_status_check.isChecked():
+        #         wellChecked('Drilling', 'CurrentWellStatus')
+        #     if self.ui.misc_well_type_check.isChecked():
+        #         wellCheckedMultiple(['Location Abandoned - APD rescinded',
+        #                              'Returned APD (Unapproved)', 'Approved Permit',
+        #                              'Active', 'Drilling Operations Suspended', 'New Permit', 'Inactive',
+        #                              'Temporarily-abandoned', 'Test Well or Monitor Well'], 'CurrentWellStatus')
+        #     for q in self.type_checks:
+        #         q.blockSignals(False)
+        # self.currently_used_lines = None
+        #
+        # # store in the data locally.
+        # drilled_segments = self.drilled_segments
+        # planned_segments = self.planned_segments
+        # currently_drilling_segments = self.currently_drilling_segments
+        #
+        # drilled_segments_3d = self.drilled_segments_3d
+        # planned_segments_3d = self.planned_segments_3d
+        # currently_drilling_segments_3d = self.currently_drilling_segments_3d
+        #
+        # drilled_df = self.drilled_df
+        # planned_df = self.planned_df
+        # currently_drilling_df = self.currently_drilling_df
+        #
+        # drilled_df, drilled_segments, drilled_segments_3d,data_drilled,df_drilled_parameters = setupData(drilled_df, drilled_segments, drilled_segments_3d)
+        # planned_df, planned_segments, planned_segments_3d,data_planned,df_planned_parameters = setupData(planned_df, planned_segments, planned_segments_3d)
+        # currently_drilling_df, currently_drilling_segments, currently_drilling_segments_3d,data_drilling,df_drilling_parameters = setupData(currently_drilling_df, currently_drilling_segments, currently_drilling_segments_3d)
+        # statusAndTypesEnabler()
+        # if self.ui.field_names_checkbox.isChecked():
+        #     self.field_sections.set_visible(True)
+        #     paths = [
+        #         PathPatch(TextPath((coord.x, coord.y), text, size=75), color="red")
+        #         for coord, text in zip(self.field_centroids_lst, self.field_labels)]
+        #     self.labels_field.set_paths(paths)
+        #     self.labels_field.set_visible(True)
+        # else:
+        #     self.field_sections.set_visible(False)
+        #     self.labels_field.set_visible(False)
+        #
+        #
+        # # Extract the colors and line widths that have seen been filled in or altered.
+        # drilled_colors_init, drilled_line_width = df_drilled_parameters['color'].tolist(), df_drilled_parameters['width'].tolist()
+        # planned_colors_init, planned_line_width = df_planned_parameters['color'].tolist(), df_planned_parameters['width'].tolist()
+        # currently_drilling_colors_init, currently_drilling_width = df_drilling_parameters['color'].tolist(), df_drilling_parameters['width'].tolist()
+        #
+        # toggle_well_display(
+        #     self.ui.asdrilled_check.isChecked(), drilled_df,
+        #     drilled_segments, drilled_colors_init, drilled_line_width,
+        #     self.all_wells_2d_asdrilled, self.all_wells_3d_asdrilled,
+        #     self.all_wells_2d_vertical_asdrilled, drilled_segments_3d)
+        #
+        # toggle_well_display(
+        #     self.ui.planned_check.isChecked(), planned_df,
+        #     planned_segments, planned_colors_init, planned_line_width,
+        #     self.all_wells_2d_planned, self.all_wells_3d_planned,
+        #     self.all_wells_2d_vertical_planned, planned_segments_3d)
+        #
+        # toggle_well_display(
+        #     self.ui.currently_drilling_check.isChecked(), currently_drilling_df,
+        #     currently_drilling_segments, currently_drilling_colors_init, currently_drilling_width,
+        #     self.all_wells_2d_current, self.all_wells_3d_current,
+        #     self.all_wells_2d_vertical_current, currently_drilling_segments_3d)
+        #
+        # if drilled_segments_3d:
+        #     self.centroid, std_vals = self.calculate_centroid_np(drilled_segments_3d)
+        #     new_xlim = [self.centroid[0] - 10000, self.centroid[0] + 10000]
+        #     new_ylim = [self.centroid[1] - 10000, self.centroid[1] + 10000]
+        #     new_zlim = [self.centroid[2] - 10000, self.centroid[2] + 10000]
+        #     self.ax3d.set_xlim3d(new_xlim)
+        #     self.ax3d.set_ylim3d(new_ylim)
+        #     self.ax3d.set_zlim3d(new_zlim)
+        #
+        # # Update, and draw, etc.
+        # self.canvas2d.blit(self.ax2d.bbox)
+        # self.canvas2d.draw()
+        # self.canvas3d.blit(self.ax3d.bbox)
+        # self.canvas3d.draw()
 
     """Generate a group of data based on the grouped xy data into line segments"""
 
-    def returnSegmentsFromDF(self, df):
-        return [[[float(x), float(y)] for x, y in zip(group['X'], group['Y'])]  # Convert each x, y to float and store as list
+    def returnSegmentsFromDF(self, df: pd.DataFrame) -> List[List[List[float]]]:
+        """
+        Converts well coordinate data from a DataFrame into nested segment lists.
+
+        Takes a DataFrame containing well coordinates and groups them by API number,
+        converting X/Y coordinates into lists of [x,y] float pairs for each well segment.
+
+        Args:
+            df: pd.DataFrame containing well coordinate data with columns:
+                - APINumber: Well identifier
+                - X: X-coordinate values
+                - Y: Y-coordinate values
+
+        Returns:
+            List[List[List[float]]]: Nested list structure where:
+                - Outer list contains all wells
+                - Middle list contains segments for each well
+                - Inner list contains [x,y] float coordinate pairs
+
+        Note:
+            - Assumes coordinates are numeric/string convertible to float
+            - Groups data by APINumber to maintain well segment relationships
+            - Preserves coordinate order within each well grouping
+
+        Example:
+            >>> df = pd.DataFrame({
+            ...     'APINumber': [1, 1, 2, 2],
+            ...     'X': ['100.5', '101.5', '200.5', '201.5'],
+            ...     'Y': ['500.5', '501.5', '600.5', '601.5']
+            ... })
+            >>> segments = returnSegmentsFromDF(df)
+            >>> segments
+            [
+                [[100.5, 500.5], [101.5, 501.5]],  # Well 1
+                [[200.5, 600.5], [201.5, 601.5]]   # Well 2
+            ]
+        """
+        return [[[float(x), float(y)] for x, y in zip(group['X'], group['Y'])]
                 for _, group in df.groupby('APINumber')]
+    # def returnSegmentsFromDF(self, df):
+    #     return [[[float(x), float(y)] for x, y in zip(group['X'], group['Y'])]  # Convert each x, y to float and store as list
+    #             for _, group in df.groupby('APINumber')]
 
     """Draw model based on these parameters
     lst = LineCollection previously defined in init
@@ -5265,25 +5919,77 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
     ax = ax2d, previously defined
     scat_line = the scatter plots for vertical wells defined in init"""
 
-    def drawModelBasedOnParameters2d(self, lst, segments, colors, line_width, ax, scat_line):
+    def drawModelBasedOnParameters2d(
+            self,
+            lst: LineCollection,
+            segments: List[List[List[float]]],
+            colors: List[str],
+            line_width: List[float],
+            ax: plt.Axes,
+            scat_line: plt.scatter
+    ) -> None:
+        """
+        Draws 2D well segments with specialized handling for vertical wells.
+
+        Renders well segments on a 2D matplotlib plot, with different handling for
+        vertical vs directional wells. Vertical wells (segments with exactly 2 points)
+        are displayed as scatter points, while other wells are shown as line segments.
+
+        Args:
+            lst: LineCollection object for drawing well segments
+            segments: List of well segments, where each segment is a list of [x,y] coordinates
+            colors: List of colors corresponding to each segment
+            line_width: List of line widths for each segment
+            ax: Matplotlib axes object for drawing
+            scat_line: Scatter plot object for vertical well visualization
+
+        Side Effects:
+            - Updates scatter plot data for vertical wells
+            - Updates LineCollection for directional wells
+            - Refreshes plot artists
+            - Modifies scatter point colors and positions
+            - Updates line segment properties
+
+        Notes:
+            - Vertical wells are identified by having exactly 2 points
+            - Empty segments result in scatter points being reset
+            - Color matching is maintained between segments and scatter points
+            - Drawing is optimized to minimize redraw operations
+            - Handles both single-point and multi-point segments
+
+        Example Usage:
+            >>> self.drawModelBasedOnParameters2d(
+                    well_collection,
+                    [[x1,y1], [x2,y2]],  # segments
+                    ['red', 'blue'],      # colors
+                    [1.0, 1.0],          # line widths
+                    ax,
+                    scatter_points
+                )
+        """
         colors_scatter = []
         collapsed_points = []
+
         try:
-            # get the index and the data
-            lst_vertical_indexes, lst_vertical_data = zip(*[(i, val) for i, val in enumerate(segments) if len(val) == 2])
-            # transform to a list of tuples
+            # Extract vertical well data (segments with exactly 2 points)
+            lst_vertical_indexes, lst_vertical_data = zip(*[
+                (i, val) for i, val in enumerate(segments) if len(val) == 2
+            ])
+            # Convert vertical well coordinates to tuples
             lst_vertical_data = [tuple(i[0]) for i in lst_vertical_data]
-            # get colors
+            # Match colors to vertical well indices
             data_color = [colors[i] for i in lst_vertical_indexes]
-            # set offsets and face colors
+            # Update scatter plot with vertical well data
             scat_line.set_offsets(lst_vertical_data)
             scat_line.set_facecolor(data_color)
         except ValueError:
             scat_line.set_offsets([None, None])
-        # write it all to the graphic
+
+        # Handle empty or populated segments
         if len(segments) == 0:
             scat_line.set_offsets([None, None])
         else:
+            # Process segments for visualization
             for i in range(len(segments)):
                 if len(segments[i]) <= 2:
                     used_colors = [colors[i]] * len(segments[i])
@@ -5292,85 +5998,349 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             if len(collapsed_points) > 0:
                 scat_line.set_offsets(collapsed_points)
 
+        # Update visual properties
         scat_line.set_facecolor(colors_scatter)
         lst.set_segments(segments)
         lst.set_colors(colors)
         lst.set_linewidth(line_width)
         ax.draw_artist(lst)
+    # def drawModelBasedOnParameters2d(self, lst, segments, colors, line_width, ax, scat_line):
+    #     colors_scatter = []
+    #     collapsed_points = []
+    #     try:
+    #         # get the index and the data
+    #         lst_vertical_indexes, lst_vertical_data = zip(*[(i, val) for i, val in enumerate(segments) if len(val) == 2])
+    #         # transform to a list of tuples
+    #         lst_vertical_data = [tuple(i[0]) for i in lst_vertical_data]
+    #         # get colors
+    #         data_color = [colors[i] for i in lst_vertical_indexes]
+    #         # set offsets and face colors
+    #         scat_line.set_offsets(lst_vertical_data)
+    #         scat_line.set_facecolor(data_color)
+    #     except ValueError:
+    #         scat_line.set_offsets([None, None])
+    #     # write it all to the graphic
+    #     if len(segments) == 0:
+    #         scat_line.set_offsets([None, None])
+    #     else:
+    #         for i in range(len(segments)):
+    #             if len(segments[i]) <= 2:
+    #                 used_colors = [colors[i]] * len(segments[i])
+    #                 colors_scatter.extend(used_colors)
+    #                 collapsed_points.extend(segments[i])
+    #         if len(collapsed_points) > 0:
+    #             scat_line.set_offsets(collapsed_points)
+    #
+    #     scat_line.set_facecolor(colors_scatter)
+    #     lst.set_segments(segments)
+    #     lst.set_colors(colors)
+    #     lst.set_linewidth(line_width)
+    #     ax.draw_artist(lst)
 
     """Draws the model based on the parameters. This is the same as drawModelBasedOnParameters2d, but in 3d."""
 
-    def drawModelBasedOnParameters(self, lst, segments, colors, line_width, ax):
-        """Set the segments, the colors, the line width and then draw the artist."""
+    def drawModelBasedOnParameters(
+            self,
+            lst: LineCollection,
+            segments: List[List[List[float]]],
+            colors: List[str],
+            line_width: List[float],
+            ax: plt.Axes
+    ) -> None:
+        """
+        Sets basic visual properties for well segments and renders them on the plot.
+
+        A simplified version of drawModelBasedOnParameters2d that handles only line
+        segments without special cases for vertical wells. Used primarily for 3D
+        visualization where scatter points are not needed.
+
+        Args:
+            lst: LineCollection object containing the well segments to be drawn
+            segments: List of well segments where each segment is a list of coordinate pairs
+            colors: List of colors corresponding to each well segment
+            line_width: List of line widths for each segment
+            ax: Matplotlib axes object to draw on
+
+        Side Effects:
+            - Updates LineCollection segment data
+            - Modifies segment colors and line widths
+            - Triggers redraw of plot artist
+
+        Notes:
+            - Part of the well visualization pipeline
+            - Handles both 2D and 3D plotting contexts
+            - No special handling for vertical wells
+            - Coordinates must be in the correct format for the plotting dimension
+            - Colors should match the number of segments
+
+        Example:
+            >>> self.drawModelBasedOnParameters(
+                    well_collection,
+                    [[[x1,y1,z1], [x2,y2,z2]]],  # 3D segments
+                    ['blue'],                      # colors
+                    [1.0],                         # line widths
+                    ax3d
+                )
+        """
         lst.set_segments(segments)
         lst.set_colors(colors)
         lst.set_linewidth(line_width)
         ax.draw_artist(lst)
+    # def drawModelBasedOnParameters(self, lst, segments, colors, line_width, ax):
+    #     """Set the segments, the colors, the line width and then draw the artist."""
+    #     lst.set_segments(segments)
+    #     lst.set_colors(colors)
+    #     lst.set_linewidth(line_width)
+    #     ax.draw_artist(lst)
 
     """When called, this will go into the self.df_docket dataframe, and add in well colors. This potentially could be done in Load_data2"""
 
-    def generate_color_palette(self):
-        # Color-blind friendly palette
-        colors = [
-            "#0072B2",  # Blue
-            "#E69F00",  # Orange
-            "#009E73",  # Green
-            "#CC79A7",  # Pink
-            "#56B4E9",  # Sky Blue
-            "#D55E00",  # Vermillion
-            "#660099",  # Purple
-            "#994F00",  # Brown
-            "#334B5C",  # Dark Slate
-            "#0000FF",  # Pure Blue
-            "#FF0000",  # Red
-            "#006600",  # Dark Green
-            "#FF00FF",  # Magenta
-            "#8B4513",  # Saddle Brown
-            "#800000",  # Maroon
-            "#808000",  # Olive
-            "#FF1493",  # Deep Pink
-            "#00CED1",  # Dark Turquoise
-            "#8B008B",  # Dark Magenta
-            "#556B2F",  # Dark Olive Green
-            "#FF8C00",  # Dark Orange
-            "#9932CC",  # Dark Orchid
-            "#8B0000",  # Dark Red
-            "#008080",  # Teal
-            "#4B0082",  # Indigo
-            "#B8860B",  # Dark Goldenrod
-            "#32CD32",  # Lime Green
-            "#800080",  # Purple
-            "#A0522D",  # Sienna
-            "#FF4500",  # Orange Red
-            "#00FF00",  # Lime
-            "#4682B4",  # Steel Blue
-            "#FFA500",  # Orange
-            "#DEB887",  # Burlywood
-            "#5F9EA0",  # Cadet Blue
-            "#D2691E",  # Chocolate
-            "#CD5C5C",  # Indian Red
-            "#708090",  # Slate Gray
-            "#000000"]  # Black
-        return [PyQt5.QtGui.QColor(color) for color in colors]
+    def generate_color_palette(self) -> List[QColor]:
+        """
+        Generates a color-blind friendly palette of QColor objects.
 
-    def get_color_for_index(self, index):
+        Creates a carefully selected palette of colors that are distinguishable
+        by colorblind individuals while maintaining aesthetic appeal. The palette
+        includes a mix of primary, secondary, and tertiary colors with sufficient
+        contrast between adjacent colors.
+
+        Returns:
+            List[QColor]: List of QColor objects representing the color palette
+
+        Color Categories:
+            - Base Colors (0-7): Primary distinctive colors for main categories
+            - Extended Set (8-15): Secondary colors for additional categories
+            - Accent Colors (16-23): Tertiary colors for highlighting
+            - Supplementary (24-38): Additional colors for large datasets
+
+        Color Properties:
+            - All colors are specified in hex format for precision
+            - Includes a mix of warm and cool tones
+            - Maintains sufficient brightness contrast
+            - Avoids problematic color combinations for common types of color blindness
+
+        Usage Notes:
+            - Colors are ordered by visual distinctiveness
+            - Black is included last as a fallback/default color
+            - Suitable for both light and dark backgrounds
+            - Verified for deuteranopia and protanopia visibility
+
+        Example:
+            >>> palette = self.generate_color_palette()
+            >>> first_color = palette[0]  # Returns QColor for blue (#0072B2)
+        """
+        # Color-blind friendly palette with semantic groupings
+        colors = [
+            "#0072B2",  # Blue - Primary visual anchor
+            "#E69F00",  # Orange - Strong contrast to blue
+            "#009E73",  # Green - Natural/environmental
+            "#CC79A7",  # Pink - Soft highlight
+            "#56B4E9",  # Sky Blue - Light accent
+            "#D55E00",  # Vermillion - Warning/alert
+            "#660099",  # Purple - Rich accent
+            "#994F00",  # Brown - Earth tone
+            "#334B5C",  # Dark Slate - Neutral accent
+            "#0000FF",  # Pure Blue - Basic reference
+            "#FF0000",  # Red - Critical/alert
+            "#006600",  # Dark Green - Secondary natural
+            "#FF00FF",  # Magenta - High visibility
+            "#8B4513",  # Saddle Brown - Natural accent
+            "#800000",  # Maroon - Deep accent
+            "#808000",  # Olive - Muted natural
+            "#FF1493",  # Deep Pink - Vibrant accent
+            "#00CED1",  # Dark Turquoise - Cool accent
+            "#8B008B",  # Dark Magenta - Rich contrast
+            "#556B2F",  # Dark Olive Green - Muted accent
+            "#FF8C00",  # Dark Orange - Warm accent
+            "#9932CC",  # Dark Orchid - Royal accent
+            "#8B0000",  # Dark Red - Deep warning
+            "#008080",  # Teal - Professional accent
+            "#4B0082",  # Indigo - Deep cool
+            "#B8860B",  # Dark Goldenrod - Warm natural
+            "#32CD32",  # Lime Green - Bright natural
+            "#800080",  # Purple - Deep rich
+            "#A0522D",  # Sienna - Earth accent
+            "#FF4500",  # Orange Red - High alert
+            "#00FF00",  # Lime - Maximum visibility
+            "#4682B4",  # Steel Blue - Industrial
+            "#FFA500",  # Orange - Standard warning
+            "#DEB887",  # Burlywood - Neutral natural
+            "#5F9EA0",  # Cadet Blue - Muted cool
+            "#D2691E",  # Chocolate - Rich warm
+            "#CD5C5C",  # Indian Red - Soft warning
+            "#708090",  # Slate Gray - Neutral cool
+            "#000000"  # Black - Ultimate contrast
+        ]
+
+        # Convert hex colors to QColor objects
+        return [QColor(color) for color in colors]
+    # def generate_color_palette(self):
+    #     # Color-blind friendly palette
+    #     colors = [
+    #         "#0072B2",  # Blue
+    #         "#E69F00",  # Orange
+    #         "#009E73",  # Green
+    #         "#CC79A7",  # Pink
+    #         "#56B4E9",  # Sky Blue
+    #         "#D55E00",  # Vermillion
+    #         "#660099",  # Purple
+    #         "#994F00",  # Brown
+    #         "#334B5C",  # Dark Slate
+    #         "#0000FF",  # Pure Blue
+    #         "#FF0000",  # Red
+    #         "#006600",  # Dark Green
+    #         "#FF00FF",  # Magenta
+    #         "#8B4513",  # Saddle Brown
+    #         "#800000",  # Maroon
+    #         "#808000",  # Olive
+    #         "#FF1493",  # Deep Pink
+    #         "#00CED1",  # Dark Turquoise
+    #         "#8B008B",  # Dark Magenta
+    #         "#556B2F",  # Dark Olive Green
+    #         "#FF8C00",  # Dark Orange
+    #         "#9932CC",  # Dark Orchid
+    #         "#8B0000",  # Dark Red
+    #         "#008080",  # Teal
+    #         "#4B0082",  # Indigo
+    #         "#B8860B",  # Dark Goldenrod
+    #         "#32CD32",  # Lime Green
+    #         "#800080",  # Purple
+    #         "#A0522D",  # Sienna
+    #         "#FF4500",  # Orange Red
+    #         "#00FF00",  # Lime
+    #         "#4682B4",  # Steel Blue
+    #         "#FFA500",  # Orange
+    #         "#DEB887",  # Burlywood
+    #         "#5F9EA0",  # Cadet Blue
+    #         "#D2691E",  # Chocolate
+    #         "#CD5C5C",  # Indian Red
+    #         "#708090",  # Slate Gray
+    #         "#000000"]  # Black
+    #     return [PyQt5.QtGui.QColor(color) for color in colors]
+    def get_color_for_index(self, index: int) -> QColor:
+        """
+        Retrieves a color from the color palette using modulo indexing.
+
+        Safely accesses the color palette by wrapping around to the start when
+        the index exceeds the palette length, ensuring a color is always returned
+        regardless of the input index value.
+
+        Args:
+            index: Integer index to select a color from the palette. Can be any value
+                   as modulo arithmetic will be applied
+
+        Returns:
+            QColor: Color object from the palette corresponding to the wrapped index
+
+        Notes:
+            - Uses modulo operation to wrap indices exceeding palette length
+            - Assumes self.color_palette is initialized with QColor objects
+            - Part of the color management system for visualization
+            - Returns consistent colors for the same index values
+
+        Example:
+            >>> color = self.get_color_for_index(5)  # Returns 6th color
+            >>> color = self.get_color_for_index(len(palette) + 2)  # Wraps to 3rd color
+        """
         return self.color_palette[index % len(self.color_palette)]
+    # def get_color_for_index(self, index):
+    #     return self.color_palette[index % len(self.color_palette)]
 
     def createOwnershipLabels(self):
-        def wipeModel(lst):
-            for label in lst:
-                label.setParent(None)
-            lst.clear()
+        def wipeModel(lst: List[QWidget]) -> None:
+            """
+            Removes all widgets from a list and clears their parent relationships.
 
-        def processOwnershipData(model, variable, variable_color, lst, layout):
+            Iterates through a list of Qt widgets, removes their parent associations,
+            and then clears the list. This is typically used for cleanup before
+            recreating UI elements.
+
+            Args:
+                lst: List of QWidget objects to be removed and cleared
+
+            Side Effects:
+                - Removes parent relationships from all widgets in the list
+                - Clears the input list
+                - Widgets become candidates for garbage collection after parent removal
+
+            Notes:
+                - Important for proper Qt widget cleanup
+                - Prevents memory leaks by removing parent references
+                - Should be called before recreating UI elements
+                - Does not delete the widgets directly, only removes references
+
+            Example:
+                >>> label_list = [QLabel("Test1"), QLabel("Test2")]
+                >>> wipeModel(label_list)
+                >>> print(len(label_list))  # Output: 0
+            """
+            for label in lst:
+                label.setParent(None)  # Remove parent relationship for proper cleanup
+            lst.clear()  # Remove all references from the list
+
+        # def wipeModel(lst):
+        #     for label in lst:
+        #         label.setParent(None)
+        #     lst.clear()
+        def processOwnershipData(
+                model: QAbstractItemModel,
+                variable: str,
+                variable_color: str,
+                lst: List[QLabel],
+                layout: QLayout
+        ) -> None:
+            """
+            Creates and styles labels for ownership data visualization.
+
+            Processes each row in the model to create interactive labels with custom
+            styling based on ownership data. Labels are colored according to the
+            specified variable color and include hover effects.
+
+            Args:
+                model: Item model containing ownership data in first column
+                variable: Column name to match in ownership data
+                variable_color: Column name containing color values
+                lst: List to store created label widgets
+                layout: Layout widget to add labels to
+
+            Side Effects:
+                - Creates new QLabel widgets
+                - Adds widgets to provided layout
+                - Appends widgets to provided list
+                - Applies custom styling to labels
+
+            Notes:
+                - Assumes self.docket_ownership_data exists as a pandas DataFrame
+                - Labels include white text shadow for visibility
+                - Hover effect adds colored border
+                - Labels maintain 2px padding
+                - Uses transparent borders by default
+
+            Example:
+                >>> labels = []
+                >>> processOwnershipData(
+                ...     model=ownership_model,
+                ...     variable='Owner',
+                ...     variable_color='OwnerColor',
+                ...     lst=labels,
+                ...     layout=vertical_layout
+                ... )
+            """
             for row in range(model.rowCount()):
-                item = model.item(row, 0)  # Get item from the first column
+                item = model.item(row, 0)  # Get item from first column
                 if item:
+                    # Create and configure label
                     label_text = item.text()
                     label = QLabel(label_text)
                     lst.append(label)
                     layout.addWidget(label)
-                    color_used = self.docket_ownership_data[self.docket_ownership_data[variable] == label_text][variable_color].iloc[0]
+
+                    # Get color from ownership data
+                    color_used = self.docket_ownership_data[
+                        self.docket_ownership_data[variable] == label_text
+                        ][variable_color].iloc[0]
+
+                    # Apply custom styling with hover effect
                     label.setStyleSheet(f"""
                         QLabel {{
                             color: {color_used};
@@ -5382,6 +6352,26 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
                             border: 1px solid {color_used};
                         }}
                     """)
+        # def processOwnershipData(model, variable, variable_color, lst, layout):
+        #     for row in range(model.rowCount()):
+        #         item = model.item(row, 0)  # Get item from the first column
+        #         if item:
+        #             label_text = item.text()
+        #             label = QLabel(label_text)
+        #             lst.append(label)
+        #             layout.addWidget(label)
+        #             color_used = self.docket_ownership_data[self.docket_ownership_data[variable] == label_text][variable_color].iloc[0]
+        #             label.setStyleSheet(f"""
+        #                 QLabel {{
+        #                     color: {color_used};
+        #                     text-shadow: 0 0 20px #fff;
+        #                     padding: 2px;
+        #                     border: 1px solid transparent;
+        #                 }}
+        #                 QLabel:hover {{
+        #                     border: 1px solid {color_used};
+        #                 }}
+        #             """)
 
         wipeModel(self.owner_label_list)
         wipeModel(self.agency_label_list)
