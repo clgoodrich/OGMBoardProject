@@ -57,65 +57,115 @@ The module serves as the main entry point for the well visualization application
 a comprehensive interface for exploring and analyzing well data, board matters, and
 related information from the State of Utah, Division of Oil, Gas, and Mining.
 """
-from typing import List
-from PyQt5.QtWidgets import QLabel, QLayout
-from PyQt5.QtCore import QAbstractItemModel
+
+# from PyQt5.QtCore import QAbstractItemModel, QModelIndex, Qt
+# from PyQt5.QtGui import QColor, QStandardItem, QStandardItemModel
+#
+# from pandas import DataFrame
+# from PyQt5.QtWidgets import QLabel, QLayout, QTableWidget, QTableWidgetItem, QWidget, QVBoxLayout, QHBoxLayout, QCheckBox, QScrollArea
+#
+# from matplotlib.lines import Line2D
+# from typing import NoReturn, Union, Optional, Set, Literal, Dict
+#
+# from shapely.ops import unary_union
+# from sqlalchemy import create_engine
+# from matplotlib.patches import Polygon
+# from shapely.geometry import Point
+# from matplotlib.collections import PatchCollection
+# import itertools
+# import regex as re
+# import matplotlib.dates as mdates
+# from PyQt5.QtCore import QModelIndex, Qt
+# from matplotlib.textpath import TextPath
+# from matplotlib.patches import PathPatch
+# from WellVisualizerBoardMatters import BoardMattersVisualizer
+# import pandas as pd
+# import numpy as np
+# import geopandas as gpd
+# from shapely.geometry import Polygon
+# from matplotlib.ticker import ScalarFormatter, FuncFormatter
+# from mpl_toolkits.mplot3d.art3d import Line3DCollection
+# from matplotlib.collections import LineCollection, PolyCollection
+# import matplotlib.pyplot as plt
+# from numpy import array, std
+# from pandas import to_numeric, read_sql, set_option, concat, to_datetime, options
+# import utm
+# import sqlite3
+# from PyQt5.QtWidgets import QMainWindow, QApplication, QStyledItemDelegate, QHeaderView
+# from datetime import datetime
+# import ModuleAgnostic as ma
+# from WellVisualizationV2 import Ui_Dialog
+# import os
+# from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+# from PyQt5.QtGui import QStandardItemModel, QStandardItem
+# from shapely import wkt
+# from PyQt5.QtWidgets import QGraphicsDropShadowEffect
+# from PyQt5.QtGui import QColor
+# from PyQt5.QtCore import Qt
+# from typing import Optional, List, Tuple, Callable
+# from matplotlib.axes import Axes
+# from matplotlib.figure import Figure
+# from matplotlib.text import Text
+# from matplotlib.backend_bases import MouseEvent
+
+
+
+# Python standard library imports
+import itertools
+import os
+import sqlite3
+from datetime import datetime
+from typing import Callable, Dict, List, Literal, NoReturn, Optional, Set, Tuple, Union
+
+# Third-party imports - Core Data/Scientific
+import numpy as np
+from numpy import array, std
 import pandas as pd
-from matplotlib.patches import PathPatch
-from matplotlib.textpath import TextPath
-from matplotlib.lines import Line2D
-from typing import NoReturn
-from pandas import concat
-from typing import List, Union, Optional
-from typing import Dict, Literal
-from typing import List, Optional, Dict
-from PyQt5.QtGui import QStandardItemModel, QStandardItem
-from PyQt5.QtWidgets import QComboBox
-from typing import Tuple
+from pandas import DataFrame, concat, options, read_sql, set_option, to_datetime, to_numeric
+import geopandas as gpd
+import utm
+from sqlalchemy import create_engine
+
+# Third-party imports - PyQt5
+import PyQt5
+from PyQt5.QtCore import QAbstractItemModel, QModelIndex, Qt
+from PyQt5.QtGui import QColor, QStandardItem, QStandardItemModel
+from PyQt5.QtWidgets import (
+    QApplication, QCheckBox, QGraphicsDropShadowEffect, QHeaderView,
+    QHBoxLayout, QLabel, QLayout, QMainWindow, QScrollArea,
+    QStyledItemDelegate, QTableWidget, QTableWidgetItem,
+    QVBoxLayout, QWidget
+)
+
+# Third-party imports - Matplotlib
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
-from matplotlib.figure import Figure
 from matplotlib.backend_bases import MouseEvent
-from typing import List
-from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QCheckBox, QScrollArea, QLabel
-from shapely.ops import unary_union
-from sqlalchemy import create_engine
-from matplotlib.patches import Polygon
-from shapely.geometry import Point
-from matplotlib.collections import PatchCollection
-import itertools
-import regex as re
-import matplotlib.dates as mdates
-from PyQt5.QtCore import QModelIndex, Qt
-from matplotlib.textpath import TextPath
-from matplotlib.patches import PathPatch
-from WellVisualizerBoardMatters import BoardMattersVisualizer
-import pandas as pd
-import numpy as np
-import geopandas as gpd
-import time
-from shapely.geometry import Polygon
-import PyQt5
-from matplotlib.ticker import ScalarFormatter, FuncFormatter
-from mpl_toolkits.mplot3d.art3d import Line3DCollection
-from matplotlib.collections import LineCollection, PolyCollection
-import matplotlib.pyplot as plt
-from numpy import array, std
-from pandas import to_numeric, read_sql, set_option, concat, to_datetime, options
-import utm
-import sqlite3
-from PyQt5.QtWidgets import QMainWindow, QApplication, QStyledItemDelegate, QHeaderView
-from datetime import datetime
-import ModuleAgnostic as ma
-from WellVisualizationV2 import Ui_Dialog
-import os
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from PyQt5.QtGui import QStandardItemModel, QStandardItem
+from matplotlib.collections import LineCollection, PatchCollection, PolyCollection
+from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
+from matplotlib.patches import PathPatch, Polygon
+from matplotlib.text import Text
+from matplotlib.textpath import TextPath
+from matplotlib.ticker import FuncFormatter, ScalarFormatter
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+# Third-party imports - Geospatial
 from shapely import wkt
-from PyQt5.QtWidgets import QGraphicsDropShadowEffect
-from PyQt5.QtGui import QColor
-from PyQt5.QtCore import Qt
+from shapely.geometry import Point, Polygon
+from shapely.ops import unary_union
+
+# Third-party imports - Other
+import regex as re
+
+# Local application imports
+import ModuleAgnostic as ma
+from WellVisualizerBoardMatters import BoardMattersVisualizer
+from WellVisualizationV2 import Ui_Dialog
+
+
 """Function and class designed for creating bold values in the self.ui.well_lst_combobox, specifically bolding wells of importance."""
 
 
@@ -506,10 +556,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         self.ax_prod_1.set_xticklabels(self.ax_prod_1.get_xticklabels(), rotation=45, ha='right')
         self.ax_prod_2.set_xticks(self.ax_prod_2.get_xticks())
         self.ax_prod_2.set_xticklabels(self.ax_prod_2.get_xticklabels(), rotation=45, ha='right')
-        # self.profit_line, = self.ax_prod_1.plot([], [], color='red', linewidth=2, zorder=1)  ## create the line graphic for profit
-        # self.profit_line_cum, = self.ax_prod_1.plot([], [], color='black', linewidth=2, zorder=1)  ## create the line graphic for cumulative profit
-        # self.prod_line, = self.ax_prod_2.plot([], [], color='blue', linewidth=2, zorder=1)  ## create the line graphic for production
-        # self.prod_line_cum, = self.ax_prod_2.plot([], [], color='black', linewidth=2, zorder=1)  ## create the line graphic for cumulative production
         self.current_prod = 'oil'  ### create an initial default for oil. fig 1 can switch between gas and oil
 
         self.profit_line, = self.ax_prod_1.plot([], [], color='red', linewidth=2, zorder=1, label='Monthly Profit')
@@ -527,7 +573,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         """Assemble, organize, and produce the actual data from the .db item,"""
         self.table_model = QStandardItemModel()
         apd_data_dir = os.path.join(os.getcwd(), 'Board_DB.db')
-        print(apd_data_dir)
         self.conn_db = sqlite3.connect(apd_data_dir)
         self.cursor_db = self.conn_db.cursor()
 
@@ -642,7 +687,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         self.ui.ownership_button_group.buttonClicked.connect(self.ownershipSelection)
 
-        # self.ui.ownership_checkbox.stateChanged.connect(self.ownershipSelection)
         self.ui.ownership_checkbox.setEnabled(False)
         self.ui.section_ownership_radio_complex.setEnabled(False)
         self.ui.section_ownership_radio_simplified.setEnabled(False)
@@ -1338,7 +1382,8 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         # Update UI elements and ownership data
         # self.updateWellTypeAndStatusCheckboxes()
-        self.update_checkboxes()
+        # self.update_checkboxes()
+        self.create_checkboxes()
         self.calculateCentroidsForSections()
         # self.updateWellDataBasedOnParameters()
         self.returnWellDataDependingOnParametersTest()
@@ -1347,7 +1392,8 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         self.colorInOwnership()
         self.ownershipSelection()
         self.updateOwnerAndAgencyModels()
-        self.updateOwnershipCheckboxes()
+        # self.updateOwnershipCheckboxes()
+        self.createOwnershipLabels()
 
         # Finalize updates
         # self.redraw2DCanvas()
@@ -6246,7 +6292,41 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
     # def get_color_for_index(self, index):
     #     return self.color_palette[index % len(self.color_palette)]
 
-    def createOwnershipLabels(self):
+    def createOwnershipLabels(self) -> None:
+        """
+        Creates and manages ownership label display based on checkbox and radio button states.
+
+        Handles the creation and display of ownership labels by either owner or agency,
+        depending on UI selection. Cleans up existing labels before creating new ones
+        and processes the data according to the selected view mode.
+
+        Side Effects:
+            - Clears existing owner and agency labels
+            - Creates new labels based on selection
+            - Updates the owner layout with new labels
+            - Modifies visibility of ownership information
+
+        Notes:
+            - Requires initialized self.owner_label_list and self.agency_label_list
+            - Depends on self.ui.ownership_checkbox state
+            - Uses ownership button group with IDs:
+                * -2: Owner view
+                * -3: Agency view
+            - Processes data using owner_model or agency_model based on selection
+
+        UI Dependencies:
+            - self.ui.ownership_checkbox: Controls overall visibility
+            - self.ui.ownership_button_group: Controls view mode
+            - self.owner_layout: Layout container for labels
+
+        Data Dependencies:
+            - self.owner_model: Contains owner information
+            - self.agency_model: Contains agency information
+            - owner_color/agency_color: Color coding for visual representation
+
+        Example:
+            >>> self.createOwnershipLabels()  # Updates ownership display based on current UI state
+        """
         def wipeModel(lst: List[QWidget]) -> None:
             """
             Removes all widgets from a list and clears their parent relationships.
@@ -6372,70 +6452,184 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         #                     border: 1px solid {color_used};
         #                 }}
         #             """)
-
+        # Clear existing labels
         wipeModel(self.owner_label_list)
         wipeModel(self.agency_label_list)
+
+        # Process and display new labels if ownership checkbox is checked
         if self.ui.ownership_checkbox.isChecked():
             active_button_id = self.ui.ownership_button_group.checkedId()
-            if active_button_id == -2:
-                processOwnershipData(self.owner_model, 'owner', 'owner_color', self.owner_label_list, self.owner_layout)
-            if active_button_id == -3:
-                processOwnershipData(self.agency_model, 'state_legend', 'agency_color', self.agency_label_list, self.owner_layout)
 
-    def create_checkboxes(self):
-        def refineBasedOnIfDrilledOrPlanned(df, apis):
-            # Convert apis to a set for faster lookup
+            if active_button_id == -2:  # Owner view selected
+                processOwnershipData(
+                    self.owner_model,
+                    'owner',
+                    'owner_color',
+                    self.owner_label_list,
+                    self.owner_layout
+                )
+
+            if active_button_id == -3:  # Agency view selected
+                processOwnershipData(
+                    self.agency_model,
+                    'state_legend',
+                    'agency_color',
+                    self.agency_label_list,
+                    self.owner_layout
+                )
+
+        # wipeModel(self.owner_label_list)
+        # wipeModel(self.agency_label_list)
+        # if self.ui.ownership_checkbox.isChecked():
+        #     active_button_id = self.ui.ownership_button_group.checkedId()
+        #     if active_button_id == -2:
+        #         processOwnershipData(self.owner_model, 'owner', 'owner_color', self.owner_label_list, self.owner_layout)
+        #     if active_button_id == -3:
+        #         processOwnershipData(self.agency_model, 'state_legend', 'agency_color', self.agency_label_list, self.owner_layout)
+
+    def create_checkboxes(self) -> None:
+        """
+        Creates and configures interactive checkboxes for operator selection with associated well visualizations.
+
+        Generates checkboxes based on operator data, configures their styling, and sets up connections
+        for interactive well data visualization. Each checkbox controls the visibility of associated
+        well paths on both 2D and 3D plots.
+
+        Side Effects:
+            - Clears existing operator checkboxes
+            - Creates new checkboxes in the checkbox layout
+            - Initializes well path visualizations
+            - Updates matplotlib collections
+            - Modifies the state of self.operator_checkbox_list
+
+        Dependencies:
+            - self.operators_model: Model containing operator data
+            - self.df_docket: DataFrame with well/operator information
+            - self.dx_df: DataFrame containing directional survey data
+            - self.ax2d: Matplotlib axis for 2D visualization
+
+        Notes:
+            - Each checkbox gets a white glow effect for visibility
+            - Well paths are initially invisible until checkbox is checked
+            - Uses LineCollection for efficient path rendering
+            - Processes both planned and drilled wells
+
+        UI Elements:
+            - Creates checkboxes with operator names
+            - Applies custom styling with drop shadows
+            - Connects state change handlers
+
+        Example:
+            >>> self.create_checkboxes()  # Refreshes operator selection interface
+        """
+        def refineBasedOnIfDrilledOrPlanned(df: pd.DataFrame, apis: Set[str]) -> pd.DataFrame:
+            """
+            Filters and processes well data to select either drilled or planned wells based on priority.
+
+            For each API number, prioritizes drilled wells over planned wells. If a well has both
+            drilled and planned data, only the drilled data is retained. If only planned data exists,
+            that data is kept.
+
+            Args:
+                df: DataFrame containing well data with 'APINumber' and 'CitingType' columns
+                apis: Set of API numbers to filter the data
+
+            Returns:
+                pd.DataFrame: Filtered and processed DataFrame containing unique well records,
+                             prioritizing drilled over planned wells
+
+            Notes:
+                - CitingType values:
+                    * 'planned': Indicates planned well data
+                    * Not 'planned': Indicates drilled well data (includes 'asdrilled')
+                - Performs grouping by APINumber to handle multiple records
+                - Removes duplicates after processing
+                - Maintains original column structure
+
+            Example:
+                >>> apis_set = {'API123', 'API456'}
+                >>> result_df = refineBasedOnIfDrilledOrPlanned(well_data_df, apis_set)
+
+            Performance Considerations:
+                - Uses set lookup for efficient API filtering
+                - Applies groupby operations for organized processing
+                - Removes duplicates to minimize data size
+            """
+            # Convert apis to set for O(1) lookup performance
             apis_set = set(apis)
 
-            # Filter the dataframe to include only the relevant APIs
+            # Filter DataFrame to include only relevant APIs
             df_filtered = df[df['APINumber'].isin(apis_set)]
 
-            # Create two masks
+            # Create masks for well type identification
             drilled_mask = df_filtered['CitingType'] != 'planned'
             planned_mask = df_filtered['CitingType'] == 'planned'
 
-            # Group by APINumber and apply the logic
-            def select_drilled_or_planned(group):
+            def select_drilled_or_planned(group: pd.DataFrame) -> pd.DataFrame:
+                """
+                Helper function to select appropriate well data based on CitingType.
+
+                Args:
+                    group: DataFrame group containing records for a single API
+
+                Returns:
+                    DataFrame containing either drilled or planned records
+                """
                 group_drilled = group.loc[drilled_mask.loc[group.index]]
                 if not group_drilled.empty:
                     return group_drilled
                 else:
                     return group.loc[planned_mask.loc[group.index]]
 
-            # result = df_filtered.groupby('APINumber', group_keys=False, include_groups=False).apply(select_drilled_or_planned)
-            result = df_filtered.groupby('APINumber').apply(lambda x: select_drilled_or_planned(x), include_groups=False).reset_index()
+            # Process groups and clean up results
+            result = df_filtered.groupby('APINumber').apply(
+                lambda x: select_drilled_or_planned(x),
+                include_groups=False
+            ).reset_index()
 
-            # Reset index and drop duplicates
             return result.reset_index(drop=True).drop_duplicates(keep='first')
+        # def refineBasedOnIfDrilledOrPlanned(df, apis):
+        #     # Convert apis to a set for faster lookup
+        #     apis_set = set(apis)
+        #
+        #     # Filter the dataframe to include only the relevant APIs
+        #     df_filtered = df[df['APINumber'].isin(apis_set)]
+        #
+        #     # Create two masks
+        #     drilled_mask = df_filtered['CitingType'] != 'planned'
+        #     planned_mask = df_filtered['CitingType'] == 'planned'
+        #
+        #     # Group by APINumber and apply the logic
+        #     def select_drilled_or_planned(group):
+        #         group_drilled = group.loc[drilled_mask.loc[group.index]]
+        #         if not group_drilled.empty:
+        #             return group_drilled
+        #         else:
+        #             return group.loc[planned_mask.loc[group.index]]
+        #
+        #     # result = df_filtered.groupby('APINumber', group_keys=False, include_groups=False).apply(select_drilled_or_planned)
+        #     result = df_filtered.groupby('APINumber').apply(lambda x: select_drilled_or_planned(x), include_groups=False).reset_index()
+        #
+        #     # Reset index and drop duplicates
+        #     return result.reset_index(drop=True).drop_duplicates(keep='first')
 
+        # Clear existing checkboxes
         for checkbox in self.operator_checkbox_list:
             checkbox.setParent(None)
         self.operator_checkbox_list.clear()
         tester_lst = []
 
-        # Create checkboxes based on the first column of the table view
+        # Process each operator from the model
         for row in range(self.operators_model.rowCount()):
-            item = self.operators_model.item(row, 0)  # Get item from the first column
+            item = self.operators_model.item(row, 0)
             if item:
+                # Create and configure checkbox
                 checkbox_text = item.text()
                 checkbox = QCheckBox(checkbox_text)
                 self.checkbox_layout.addWidget(checkbox)
 
+                # Apply visual styling
                 color_used = self.get_color_for_index(row)
-                # checkbox.setStyleSheet(f"""
-                #     QCheckBox {{color: {color_used.name()};text-shadow: 0 0 20px #fff;}}""")
-                # checkbox.setStyleSheet(f"""
-                #     QCheckBox {{
-                #         color: {color_used.name()};
-                #         padding: 2px;
-                #         border: 1px solid transparent;
-                #         border-radius: 3px;
-                #     }}
-                #     QCheckBox:hover {{
-                #         border: 1px solid white;
-                #         box-shadow: 0 0 5px white;
-                #     }}
-                # """)
                 shadow = QGraphicsDropShadowEffect()
                 shadow.setColor(QColor('white'))
                 shadow.setBlurRadius(10)
@@ -6443,38 +6637,57 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
                 checkbox.setGraphicsEffect(shadow)
                 checkbox.setStyleSheet(f"QCheckBox {{color: {color_used.name()}}}")
 
-                # Connect the checkbox to the signal handler
-                checkbox.stateChanged.connect(lambda state, index=row, text=checkbox_text, color=color_used:
-                                              self.on_checkbox_state_changed(index, text, state, color))
+                # Connect state change handler
+                checkbox.stateChanged.connect(
+                    lambda state, index=row, text=checkbox_text, color=color_used:
+                    self.on_checkbox_state_changed(index, text, state, color)
+                )
 
-                # Store the checkbox in the list
+                # Store checkbox reference
                 self.operator_checkbox_list.append(checkbox)
-                operator_data = self.df_docket[self.df_docket['Operator'] == checkbox_text]
 
+                # Process well data for visualization
+                operator_data = self.df_docket[self.df_docket['Operator'] == checkbox_text]
                 apis = operator_data['WellID'].unique()
 
-                """Restrict down to the dx data for the specific well"""
-
                 try:
+                    # Filter and process directional survey data
                     df_wells = self.dx_df[self.dx_df['APINumber'].isin(apis)]
                     df_wells = refineBasedOnIfDrilledOrPlanned(df_wells, apis)
                     df_wells = df_wells.sort_values(by=['APINumber', 'MeasuredDepth'])
+
+                    # Create well path visualizations
+                    xy_points_dict_drilled = {
+                        k: [[x, y, spx, spy] for x, y, spx, spy, in zip(
+                            g['X'].astype(float), g['Y'].astype(float),
+                            g['SPX'].astype(float), g['SPY'].astype(float)
+                        )] for k, g in df_wells.groupby('APINumber')
+                    }
+                    output = [[r[:2] for r in v] for k, v in xy_points_dict_drilled.items() if k in apis]
+                    tester_lst.append(output)
+
+                    # Configure visualization properties
+                    colors = [color_used.name()] * len(output)
+                    line_widths = [4] * len(output)
+                    current_segment_data = LineCollection(
+                        output, color=color_used.name(),
+                        linewidth=1, linestyle="-", zorder=1
+                    )
+                    vertical_data = self.ax2d.scatter([], [], s=45, zorder=1, edgecolors='black')
+
+                    # Add to collections and configure visibility
+                    self.all_wells_2d_operators.append(current_segment_data)
+                    self.all_wells_2d_operators_vertical.append(vertical_data)
+                    self.ax2d.add_collection(current_segment_data)
+                    self.drawModelBasedOnParameters2d(
+                        current_segment_data, output, colors,
+                        line_widths, self.ax2d, vertical_data
+                    )
+                    self.all_wells_2d_operators[-1].set_visible(False)
+                    self.all_wells_2d_operators_vertical[-1].set_visible(False)
+
                 except KeyError:
                     pass
-
-                xy_points_dict_drilled = {k: [[x, y, spx, spy] for x, y, spx, spy, in zip(g['X'].astype(float), g['Y'].astype(float), g['SPX'].astype(float), g['SPY'].astype(float))] for k, g in df_wells.groupby('APINumber')}
-                output = [[r[:2] for r in v] for k, v in xy_points_dict_drilled.items() if k in apis]
-                tester_lst.append(output)
-                colors = [color_used.name()] * len(output)
-                line_widths = [4] * len(output)
-                current_segment_data = LineCollection(output, color=color_used.name(), linewidth=1, linestyle="-", zorder=1)
-                vertical_data = self.ax2d.scatter([], [], s=45, zorder=1, edgecolors='black')
-                self.all_wells_2d_operators.append(current_segment_data)
-                self.all_wells_2d_operators_vertical.append(vertical_data)
-                self.ax2d.add_collection(current_segment_data)
-                self.drawModelBasedOnParameters2d(current_segment_data, output, colors, line_widths, self.ax2d, vertical_data)
-                self.all_wells_2d_operators[-1].set_visible(False)
-                self.all_wells_2d_operators_vertical[-1].set_visible(False)
 
     def update_checkboxes(self):
         self.create_checkboxes()
@@ -6483,12 +6696,61 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         # pass
         self.createOwnershipLabels()
 
-    def on_checkbox_state_changed(self, index, checkbox_text, state, color):
-        # Emit the custom signal
+    def on_checkbox_state_changed(
+            self,
+            index: int,
+            checkbox_text: str,
+            state: int,
+            color: QColor
+    ) -> None:
+        """
+        Handles state changes for operator checkboxes and updates visualizations accordingly.
+
+        Processes checkbox state changes, emits signals for state tracking, and triggers
+        plot updates to reflect the new selection state. Used for dynamically updating
+        well path visibility in both 2D and 3D views.
+
+        Args:
+            index: Zero-based index of the checkbox in the operator list
+            checkbox_text: Display text/operator name for the checkbox
+            state: Qt checkbox state value (Qt.Checked or Qt.Unchecked)
+            color: Color associated with the operator/checkbox
+
+        Side Effects:
+            - Emits checkbox_state_changed signal
+            - Triggers plot update
+            - Updates well path visibility
+
+        Signals Emitted:
+            checkbox_state_changed(int, str, bool, QColor):
+                - index: Checkbox index
+                - checkbox_text: Operator name
+                - is_checked: Boolean state
+                - color: Operator color
+
+        Notes:
+            - Part of the dynamic update system for well visualization
+            - Avoids full plot redraw for performance
+            - Integrates with operator-specific well path collections
+
+        Example:
+            >>> # Triggered automatically when checkbox state changes
+            >>> self.checkbox.stateChanged.connect(
+            ...     lambda state: self.on_checkbox_state_changed(0, "OperatorA", state, QColor("red"))
+            ... )
+        """
+        # Emit signal with processed state
         self.checkbox_state_changed.emit(index, checkbox_text, state == Qt.Checked, color)
 
-        # You can also handle the state change directly here if needed
+        # Update visualization
         self.update_plot()
+
+    # def on_checkbox_state_changed(self, index, checkbox_text, state, color):
+    #     # Emit the custom signal
+    #     self.checkbox_state_changed.emit(index, checkbox_text, state == Qt.Checked, color)
+    #
+    #     # You can also handle the state change directly here if needed
+    #     self.update_plot()
 
     # def get_checkbox_state(self, index):
     #     if 0 <= index < len(self.operator_checkbox_list):
@@ -6511,31 +6773,124 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
     #     if 0 <= index < len(self.operator_checkbox_list):
     #         return self.get_color_for_index(index)
     #     return None
+    def update_plot(self) -> None:
+        """
+        Updates well path visibility in the 2D plot based on operator checkbox states.
 
-    def update_plot(self):
+        Efficiently updates the visualization by only modifying visibility states of
+        existing plot elements rather than redrawing the entire plot. Uses matplotlib's
+        blitting functionality for optimized rendering performance.
+
+        Side Effects:
+            - Updates visibility of well path line collections
+            - Updates visibility of vertical well markers
+            - Triggers canvas redraw using blitting optimization
+
+        Notes:
+            - Operates on self.all_wells_2d_operators collections
+            - Maintains synchronization between checkboxes and visualizations
+            - Uses blit() for efficient updates without full redraw
+            - Handles both horizontal and vertical well representations
+
+        Performance Considerations:
+            - Avoids full plot redraw for better performance
+            - Uses matplotlib's blitting for efficient updates
+            - Only updates changed elements
+
+        Dependencies:
+            - self.operator_checkbox_list: List of operator checkboxes
+            - self.all_wells_2d_operators: Line collections for well paths
+            - self.all_wells_2d_operators_vertical: Scatter collections for vertical wells
+            - self.canvas2d: Matplotlib canvas for 2D visualization
+            - self.ax2d: Matplotlib axis for 2D plot
+
+        Example:
+            >>> self.update_plot()  # Updates visibility based on current checkbox states
+        """
+        # Update visibility based on checkbox states
         for index, checkbox in enumerate(self.operator_checkbox_list):
-            if checkbox.isChecked():
-                self.all_wells_2d_operators[index].set_visible(True)
-                self.all_wells_2d_operators_vertical[index].set_visible(True)
-            else:
-                self.all_wells_2d_operators[index].set_visible(False)
-                self.all_wells_2d_operators_vertical[index].set_visible(False)
+            is_visible = checkbox.isChecked()
+            self.all_wells_2d_operators[index].set_visible(is_visible)
+            self.all_wells_2d_operators_vertical[index].set_visible(is_visible)
+
+        # Efficiently update display using blitting
         self.canvas2d.blit(self.ax2d.bbox)
         self.canvas2d.draw()
 
-    def returnWellsWithParameters(self):
-        # Dictionary mapping well types to colors
-        colors_type = {'Oil Well': '#c34c00',  # Red
-                       'Gas Well': '#f1aa00',  # Orange
-                       'Water Disposal Well': '#0032b0',  # Blue
-                       'Oil Well/Water Disposal Well': '#0032b0',  # Blue
-                       'Water Injection Well': '#93ebff',  # Cyan
-                       'Gas Injection Well': '#93ebff',  # Cyan
-                       'Dry Hole': '#4f494b',  # Dark Gray
-                       'Unknown': '#985bee',  # Magenta
-                       'Test Well': '#985bee',  # Magenta
-                       'Water Source Well': '#985bee'}  # Magenta
+    # def update_plot(self):
+    #     for index, checkbox in enumerate(self.operator_checkbox_list):
+    #         if checkbox.isChecked():
+    #             self.all_wells_2d_operators[index].set_visible(True)
+    #             self.all_wells_2d_operators_vertical[index].set_visible(True)
+    #         else:
+    #             self.all_wells_2d_operators[index].set_visible(False)
+    #             self.all_wells_2d_operators_vertical[index].set_visible(False)
+    #     self.canvas2d.blit(self.ax2d.bbox)
+    #     self.canvas2d.draw()
+    def returnWellsWithParameters(self) -> DataFrame:
+        """
+        Processes and returns well data with color-coded parameters for visualization.
 
+        Creates a filtered and enriched DataFrame containing well information with
+        standardized color mappings for well types and operational status. Merges
+        directional survey data with docket information for comprehensive visualization.
+
+        Color Schemes:
+            Well Types:
+                - Oil Wells: Red (#c34c00)
+                - Gas Wells: Orange (#f1aa00)
+                - Water Disposal Wells: Blue (#0032b0)
+                - Injection Wells: Cyan (#93ebff)
+                - Dry Holes: Dark Gray (#4f494b)
+                - Unknown/Test Wells: Magenta (#985bee)
+
+            Well Status:
+                - Producing: Green (#a2e361)
+                - Plugged & Abandoned: Purple (#4c2d77)
+                - Shut In: Tan (#D2B48C)
+                - Drilling: Navy (#001958)
+                - Other: Teal (#4a7583)
+
+        Returns:
+            DataFrame with columns:
+                - APINumber: Well identifier
+                - X, Y: Well coordinates
+                - Targeted Elevation
+                - CitingType
+                - SPX, SPY: Surface point coordinates
+                - CurrentWellType
+                - CurrentWellStatus
+                - WellAge
+                - MeasuredDepth
+                - ConcCode_y
+                - WellTypeColor: Hex color based on well type
+                - WellStatusColor: Hex color based on well status
+
+        Side Effects:
+            None - Pure data processing function
+
+        Notes:
+            - Merges directional survey data with docket information
+            - Removes duplicate entries
+            - Sorts by APINumber and MeasuredDepth
+            - Maps colors based on standardized industry visualization schemes
+            - Handles unknown status values with default teal color
+        """
+        # Define color mappings for well types
+        colors_type = {
+            'Oil Well': '#c34c00',  # Red
+            'Gas Well': '#f1aa00',  # Orange
+            'Water Disposal Well': '#0032b0',  # Blue
+            'Oil Well/Water Disposal Well': '#0032b0',  # Blue
+            'Water Injection Well': '#93ebff',  # Cyan
+            'Gas Injection Well': '#93ebff',  # Cyan
+            'Dry Hole': '#4f494b',  # Dark Gray
+            'Unknown': '#985bee',  # Magenta
+            'Test Well': '#985bee',  # Magenta
+            'Water Source Well': '#985bee'  # Magenta
+        }
+
+        # Define color mappings for well status
         colors_status = {
             'Producing': '#a2e361',  # Green
             'Plugged & Abandoned': '#4c2d77',  # Purple
@@ -6544,284 +6899,922 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             'Other': '#4a7583'  # Teal
         }
 
-        necessary_columns = ['APINumber', 'X', 'Y', 'Targeted Elevation', 'CitingType', 'SPX', 'SPY',
-                             'CurrentWellType', 'CurrentWellStatus', 'WellAge', 'MeasuredDepth', 'ConcCode_y']
-        # Extract unique API numbers from docket DataFrame
+        # Define required columns for final dataset
+        necessary_columns = [
+            'APINumber', 'X', 'Y', 'Targeted Elevation', 'CitingType',
+            'SPX', 'SPY', 'CurrentWellType', 'CurrentWellStatus',
+            'WellAge', 'MeasuredDepth', 'ConcCode_y'
+        ]
+
+        # Process and filter data
         apis = self.df_docket['WellID'].unique()
         operators = self.df_docket['Operator'].unique()
-        # Isolate directional surveys based on present API Numbers
         dx_filtered = self.dx_df[self.dx_df['APINumber'].isin(apis)]
-        # Filter self.df_docket to only items with directional surveys
         docket_filtered = self.df_docket[self.df_docket['WellID'].isin(apis)]
-        # merge the dataframes so we have dataframes with the df_docket data, but also the directional surveys. The new dataframe will be large.
-        merged_df = pd.merge(dx_filtered, docket_filtered, left_on='APINumber', right_on='WellID')
-        # Manipulate the data, dropping duplicates, sorting, eliminating some columns, etc.
+
+        # Merge and clean data
+        merged_df = pd.merge(dx_filtered, docket_filtered,
+                             left_on='APINumber', right_on='WellID')
         merged_df = merged_df.drop_duplicates(keep='first')
         merged_df = merged_df.sort_values(by=['APINumber', 'MeasuredDepth'])
+
+        # Create final dataset with necessary columns
         final_df = merged_df[necessary_columns]
         final_df.reset_index(drop=True, inplace=True)
-        # create a new column based on current well type being mapped with colors.
+
+        # Add color coding
         final_df['WellTypeColor'] = final_df['CurrentWellType'].map(colors_type)
-        final_df['WellStatusColor'] = final_df['CurrentWellStatus'].apply(lambda x: colors_status.get(x, '#4a7583'))
-        final_df = final_df.sort_values(by=['APINumber', 'MeasuredDepth'])
-        return final_df
+        final_df['WellStatusColor'] = final_df['CurrentWellStatus'].apply(
+            lambda x: colors_status.get(x, '#4a7583')
+        )
+
+        return final_df.sort_values(by=['APINumber', 'MeasuredDepth'])
+
+    # def returnWellsWithParameters(self):
+    #     # Dictionary mapping well types to colors
+    #     colors_type = {'Oil Well': '#c34c00',  # Red
+    #                    'Gas Well': '#f1aa00',  # Orange
+    #                    'Water Disposal Well': '#0032b0',  # Blue
+    #                    'Oil Well/Water Disposal Well': '#0032b0',  # Blue
+    #                    'Water Injection Well': '#93ebff',  # Cyan
+    #                    'Gas Injection Well': '#93ebff',  # Cyan
+    #                    'Dry Hole': '#4f494b',  # Dark Gray
+    #                    'Unknown': '#985bee',  # Magenta
+    #                    'Test Well': '#985bee',  # Magenta
+    #                    'Water Source Well': '#985bee'}  # Magenta
+    #
+    #     colors_status = {
+    #         'Producing': '#a2e361',  # Green
+    #         'Plugged & Abandoned': '#4c2d77',  # Purple
+    #         'Shut In': '#D2B48C',  # tan
+    #         'Drilling': '#001958',  # Navy
+    #         'Other': '#4a7583'  # Teal
+    #     }
+    #
+    #     necessary_columns = ['APINumber', 'X', 'Y', 'Targeted Elevation', 'CitingType', 'SPX', 'SPY',
+    #                          'CurrentWellType', 'CurrentWellStatus', 'WellAge', 'MeasuredDepth', 'ConcCode_y']
+    #     # Extract unique API numbers from docket DataFrame
+    #     apis = self.df_docket['WellID'].unique()
+    #     operators = self.df_docket['Operator'].unique()
+    #     # Isolate directional surveys based on present API Numbers
+    #     dx_filtered = self.dx_df[self.dx_df['APINumber'].isin(apis)]
+    #     # Filter self.df_docket to only items with directional surveys
+    #     docket_filtered = self.df_docket[self.df_docket['WellID'].isin(apis)]
+    #     # merge the dataframes so we have dataframes with the df_docket data, but also the directional surveys. The new dataframe will be large.
+    #     merged_df = pd.merge(dx_filtered, docket_filtered, left_on='APINumber', right_on='WellID')
+    #     # Manipulate the data, dropping duplicates, sorting, eliminating some columns, etc.
+    #     merged_df = merged_df.drop_duplicates(keep='first')
+    #     merged_df = merged_df.sort_values(by=['APINumber', 'MeasuredDepth'])
+    #     final_df = merged_df[necessary_columns]
+    #     final_df.reset_index(drop=True, inplace=True)
+    #     # create a new column based on current well type being mapped with colors.
+    #     final_df['WellTypeColor'] = final_df['CurrentWellType'].map(colors_type)
+    #     final_df['WellStatusColor'] = final_df['CurrentWellStatus'].apply(lambda x: colors_status.get(x, '#4a7583'))
+    #     final_df = final_df.sort_values(by=['APINumber', 'MeasuredDepth'])
+    #     return final_df
 
     """This preps the township and range sections for graphing."""
 
-    def draw2dModelSections(self):
-        def transform_string(s):
-            # Split the string into parts using regular expressions
+    def draw2dModelSections(self) -> Tuple[List[List[List[float]]], List[str]]:
+        """
+        Processes and transforms plat (section) data for 2D visualization of well sections.
+
+        Extracts section boundary coordinates and labels from plat data, grouping by
+        concession codes and transforming labels into a readable format. Used to create
+        the base layout for the 2D well visualization model.
+
+        Returns:
+            tuple containing:
+                - plat_data: List of section boundary coordinates grouped by section
+                  Each section is a list of [easting, northing] coordinate pairs
+                - plat_labels: List of transformed section labels in readable format
+                  (e.g., '1 23S 2W B' instead of '01235S02WB')
+
+        Side Effects:
+            - Updates self.all_wells_plat_labels_for_editing with raw section labels
+
+        Notes:
+            - Processes data from self.df_plat DataFrame
+            - Groups coordinates by concession code
+            - Transforms section labels using transform_string helper function
+            - Coordinate pairs are in [Easting, Northing] format
+
+        Example Output:
+            (
+                [[[100.0, 200.0], [150.0, 200.0], ...]], # Coordinates for sections
+                ['1 23S 2W B', '2 23S 2W B', ...]        # Transformed section labels
+            )
+        """
+        def transform_string(s: str) -> str:
+            """
+            Transforms a well location string from compact format to readable format.
+
+            Converts strings like '01235S02WB' to formatted strings like '1 23S 2W B'
+            by removing leading zeros and adding spaces between components. Used for
+            standardizing location representations in well data visualization.
+
+            Format components:
+                - First 2 digits: Section number
+                - Next 2 digits + 'S': Township number with direction
+                - Next 2 digits + 'W': Range number with direction
+                - Last character: Baseline identifier
+
+            Args:
+                s: Input string in format 'SSTTDRRDB' where:
+                   SS = Section (2 digits)
+                   TT = Township (2 digits)
+                   D = Direction (S)
+                   RR = Range (2 digits)
+                   D = Direction (W)
+                   B = Baseline identifier
+
+            Returns:
+                Formatted string with components separated by spaces and leading zeros removed.
+                Returns original string if it doesn't match the expected pattern.
+
+            Examples:
+                >>> transform_string('01235S02WB')
+                '1 23S 2W B'
+                >>> transform_string('12345S67WN')
+                '12 34S 67W N'
+                >>> transform_string('invalid')
+                'invalid'
+            """
+
+            # Parse string using regex pattern for well location format
             parts = re.match(r'(\d{2})(\d{2}S)(\d{2}W)([A-Z])', s)
             if not parts:
-                return s  # If the string doesn't match the pattern, return it as is
+                return s  # Return unchanged if pattern doesn't match
 
-            # Remove leading zeros from each part
-            part1 = str(int(parts.group(1)))
-            part2 = str(int(parts.group(2)[:-1])) + parts.group(2)[-1]
-            part3 = str(int(parts.group(3)[:-1])) + parts.group(3)[-1]
-            part4 = parts.group(4)
+            # Extract and format components, removing leading zeros
+            part1 = str(int(parts.group(1)))  # Section number
+            part2 = str(int(parts.group(2)[:-1])) + parts.group(2)[-1]  # Township
+            part3 = str(int(parts.group(3)[:-1])) + parts.group(3)[-1]  # Range
+            part4 = parts.group(4)  # Baseline
 
+            # Return formatted string with proper spacing
             return f"{part1} {part2} {part3} {part4}"
 
+        # def transform_string(s):
+        #     # Split the string into parts using regular expressions
+        #     parts = re.match(r'(\d{2})(\d{2}S)(\d{2}W)([A-Z])', s)
+        #     if not parts:
+        #         return s  # If the string doesn't match the pattern, return it as is
+        #
+        #     # Remove leading zeros from each part
+        #     part1 = str(int(parts.group(1)))
+        #     part2 = str(int(parts.group(2)[:-1])) + parts.group(2)[-1]
+        #     part3 = str(int(parts.group(3)[:-1])) + parts.group(3)[-1]
+        #     part4 = parts.group(4)
+        #
+        #     return f"{part1} {part2} {part3} {part4}"
+
         # generate a list of data of the plat, with its xy and ID values
+        # Extract coordinate and concession data
         plat_data = self.df_plat[['Easting', 'Northing', 'Conc']].values.tolist()
 
-        # group it into a list
+        # Group coordinates by concession code
         plat_data = [list(group) for _, group in itertools.groupby(plat_data, lambda x: x[2])]
 
-        # get the labels
+        # Extract raw section labels
         plat_labels = [i[0][2] for i in plat_data]
 
-        # I don't think this ever gets used
+        # Store raw labels for potential future use
         self.all_wells_plat_labels_for_editing = plat_labels
 
-        # transform the string in the label to what will be displayed
+        # Transform labels to readable format
         plat_labels = [transform_string(i) for i in plat_labels]
 
-        # reformat the plat xy data
+        # Extract only coordinate pairs from grouped data
         plat_data = [[j[:2] for j in i] for i in plat_data]
+
         return plat_data, plat_labels
 
-    def retrievePlatDataRelevant(self):
-        pass
+        # plat_data = self.df_plat[['Easting', 'Northing', 'Conc']].values.tolist()
+        #
+        # # group it into a list
+        # plat_data = [list(group) for _, group in itertools.groupby(plat_data, lambda x: x[2])]
+        #
+        # # get the labels
+        # plat_labels = [i[0][2] for i in plat_data]
+        #
+        # # I don't think this ever gets used
+        # self.all_wells_plat_labels_for_editing = plat_labels
+        #
+        # # transform the string in the label to what will be displayed
+        # plat_labels = [transform_string(i) for i in plat_labels]
+        #
+        # # reformat the plat xy data
+        # plat_data = [[j[:2] for j in i] for i in plat_data]
+        # return plat_data, plat_labels
 
-    def calculate_centroid_np(self, points):
-        # Flatten the list of lists and convert to a numpy array, then get a standard deviation array and the mean
+    # def retrievePlatDataRelevant(self):
+    #     pass
+
+    def calculate_centroid_np(
+            self,
+            points: List[List[Union[float, int]]]
+    ) -> Tuple[Tuple[float, ...], Tuple[float, ...]]:
+        """
+        Calculates the centroid and standard deviation of a set of multi-dimensional points.
+
+        Processes a nested list of points to find their geometric center (centroid) and
+        the spread of points (standard deviation) along each dimension. Commonly used
+        for determining visualization bounds and central focus points for well plots.
+
+        Args:
+            points: Nested list of coordinate points where each point is a list of
+                   coordinates [x, y] or [x, y, z]. Points can be grouped in sublists.
+
+        Returns:
+            tuple containing:
+                - centroid: Tuple of coordinates representing the geometric center
+                - std_vals: Tuple of standard deviations for each dimension
+
+        Notes:
+            - Flattens nested point structure before calculation
+            - Uses numpy for efficient array operations
+            - Handles both 2D and 3D point sets
+            - Used for camera/view positioning in visualization
+
+        Example:
+            >>> points = [[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0]]]
+            >>> centroid, std_vals = calculate_centroid_np(points)
+            >>> print(centroid)  # (3.0, 4.0)
+            >>> print(std_vals)  # (1.63, 1.63)  # approximate values
+        """
+        # Flatten nested point structure and convert to numpy array
         flat_array = array([point for sublist in points for point in sublist])
+
+        # Calculate standard deviation along each dimension
         std_vals = std(flat_array, axis=0)
+
+        # Calculate mean position (centroid)
         centroid = flat_array.mean(axis=0)
 
         return tuple(centroid), tuple(std_vals)
 
-    def ownershipSelection(self):
+    # def calculate_centroid_np(self, points):
+    #     # Flatten the list of lists and convert to a numpy array, then get a standard deviation array and the mean
+    #     flat_array = array([point for sublist in points for point in sublist])
+    #     std_vals = std(flat_array, axis=0)
+    #     centroid = flat_array.mean(axis=0)
+    #
+    #     return tuple(centroid), tuple(std_vals)
+    def ownershipSelection(self) -> None:
+        """
+        Controls visibility of ownership section layers based on UI checkbox and radio button states.
+
+        Manages the display of ownership visualization layers on the 2D map, toggling between
+        agency and owner views based on user selection. Uses efficient canvas blitting for
+        performance optimization.
+
+        Side Effects:
+            - Updates visibility of ownership section layers
+            - Updates ownership labels when layers are visible
+            - Triggers canvas redraw
+
+        Notes:
+            - Radio button IDs:
+                -2: Owner view
+                -3: Agency view
+            - Uses matplotlib's blitting for efficient updates
+            - Ownership layers are mutually exclusive
+
+        Dependencies:
+            - self.ui.ownership_checkbox: Main ownership toggle
+            - self.ui.ownership_button_group: Radio button group for view selection
+            - self.ownership_sections_agency: Agency ownership layer
+            - self.ownership_sections_owner: Owner ownership layer
+            - self.canvas2d: Matplotlib canvas
+            - self.createOwnershipLabels(): Helper method for label generation
+
+        Example:
+            >>> self.ownershipSelection()  # Updates visibility based on current UI state
+        """
         if self.ui.ownership_checkbox.isChecked():
+            # Get active radio button selection
             active_button_id = self.ui.ownership_button_group.checkedId()
-            if active_button_id == -2:
+
+            # Toggle visibility based on selection
+            if active_button_id == -2:  # Owner view
                 self.ownership_sections_agency.set_visible(False)
                 self.ownership_sections_owner.set_visible(True)
-            if active_button_id == -3:
+            if active_button_id == -3:  # Agency view
                 self.ownership_sections_owner.set_visible(False)
                 self.ownership_sections_agency.set_visible(True)
-            self.updateOwnershipCheckboxes()
+
+            # Update ownership labels
+            self.createOwnershipLabels()
         else:
+            # Hide all ownership layers if checkbox is unchecked
             self.ownership_sections_agency.set_visible(False)
             self.ownership_sections_owner.set_visible(False)
+
+        # Efficiently update display using blitting
         self.canvas2d.blit(self.ax2d.bbox)
         self.canvas2d.draw()
 
-    """This function is used for drawing the production graphic on the production graphic tab. Format the data, process the data, display the data"""
 
-    def drawProductionGraphic(self):
-        def millions_formatter(x, pos):
-            """Formats the y-axis tick labels to display millions."""
+    # def ownershipSelection(self):
+    #     if self.ui.ownership_checkbox.isChecked():
+    #         active_button_id = self.ui.ownership_button_group.checkedId()
+    #         if active_button_id == -2:
+    #             self.ownership_sections_agency.set_visible(False)
+    #             self.ownership_sections_owner.set_visible(True)
+    #         if active_button_id == -3:
+    #             self.ownership_sections_owner.set_visible(False)
+    #             self.ownership_sections_agency.set_visible(True)
+    #         # self.updateOwnershipCheckboxes()
+    #         self.createOwnershipLabels()
+    #     else:
+    #         self.ownership_sections_agency.set_visible(False)
+    #         self.ownership_sections_owner.set_visible(False)
+    #     self.canvas2d.blit(self.ax2d.bbox)
+    #     self.canvas2d.draw()
+    def _update_oil_plots(self, current_data_row: pd.DataFrame) -> None:
+        """
+        Updates visualization plots for oil production data.
+
+        Args:
+            current_data_row: DataFrame containing filtered oil production data
+                Required columns:
+                - Date: datetime
+                - Potential Oil Profit: float
+                - Potential Cumulative Oil Profit: float
+                - Oil Volume (bbl): float
+                - Cumulative Potential Oil Production (bbl): float
+
+        Side Effects:
+            - Updates titles, data, and labels for oil production plots
+            - Modifies self.ax_prod_1 and self.ax_prod_2 plot elements
+            - Updates line plots for monthly and cumulative values
+        """
+        # Set titles for both axes
+        self.ax_prod_1.set_title('Potential Profit')
+        self.ax_prod_2.set_title('Produced Oil (bbl)')
+
+        # Update profit plots
+        self.profit_line.set_data(current_data_row['Date'], current_data_row['Potential Oil Profit'])
+        self.profit_line_cum.set_data(current_data_row['Date'], current_data_row['Potential Cumulative Oil Profit'])
+
+        # Update production volume plots
+        self.prod_line.set_data(current_data_row['Date'], current_data_row['Oil Volume (bbl)'])
+        self.prod_line_cum.set_data(current_data_row['Date'],
+                                    current_data_row['Cumulative Potential Oil Production (bbl)'])
+
+        # Update plot labels
+        self.profit_line.set_label('Monthly Oil Profit')
+        self.profit_line_cum.set_label('Cumulative Oil Profit')
+        self.prod_line.set_label('Monthly Oil Production')
+        self.prod_line_cum.set_label('Cumulative Oil Production')
+
+    def _update_gas_plots(self, current_data_row: pd.DataFrame) -> None:
+        """
+        Updates visualization plots for gas production data.
+
+        Args:
+            current_data_row: DataFrame containing filtered gas production data
+                Required columns:
+                - Date: datetime
+                - Potential Gas Profit: float
+                - Potential Cumulative Gas Profit: float
+                - Gas Volume (mcf): float
+                - Cumulative Potential Gas Production (mcf): float
+
+        Side Effects:
+            - Updates titles, data, and labels for gas production plots
+            - Modifies self.ax_prod_1 and self.ax_prod_2 plot elements
+            - Updates line plots for monthly and cumulative values
+        """
+        # Set titles for both axes
+        self.ax_prod_1.set_title('Potential Profit')
+        self.ax_prod_2.set_title('Produced Gas Volume (mcf)')
+
+        # Update profit plots
+        self.profit_line.set_data(current_data_row['Date'], current_data_row['Potential Gas Profit'])
+        self.profit_line_cum.set_data(current_data_row['Date'], current_data_row['Potential Cumulative Gas Profit'])
+
+        # Update production volume plots
+        self.prod_line.set_data(current_data_row['Date'], current_data_row['Gas Volume (mcf)'])
+        self.prod_line_cum.set_data(current_data_row['Date'],
+                                    current_data_row['Cumulative Potential Gas Production (mcf)'])
+
+        # Update plot labels
+        self.profit_line.set_label('Monthly Gas Profit')
+        self.profit_line_cum.set_label('Cumulative Gas Profit')
+        self.prod_line.set_label('Monthly Gas Production')
+        self.prod_line_cum.set_label('Cumulative Gas Production')
+    def drawProductionGraphic(self) -> None:
+        """
+        Generates and updates production visualization graphs for oil and gas wells.
+
+        Creates dual-panel visualization showing profit potential and production volumes
+        for either oil or gas wells. Handles data processing, cumulative calculations,
+        and dynamic graph updates based on user selection.
+
+        Side Effects:
+            - Updates self.ax_prod_1 with profit data
+            - Updates self.ax_prod_2 with production volume data
+            - Refreshes both canvases with new data
+
+        Notes:
+            - Automatically formats large numbers in millions (M)
+            - Handles date formatting for x-axis
+            - Adjusts tick density based on data volume
+            - Supports both oil (bbl) and gas (mcf) visualization
+            - Uses matplotlib's blitting for efficient updates
+
+        Dependencies:
+            - self.df_prod: DataFrame containing production data
+            - self.targeted_well: Currently selected well ID
+            - self.current_prod: Current production type ('oil' or 'gas')
+            - self.ui.prod_button_group: Button group for production type selection
+                -2: Gas selection
+                -3: Oil selection
+        """
+
+        def millions_formatter(x: float, pos: Optional[int]) -> str:
+            """
+            Formats axis labels to display millions with M suffix.
+
+            Args:
+                x: Value to format
+                pos: Position on axis (unused but required by FuncFormatter)
+
+            Returns:
+                Formatted string with M suffix for millions, rounded to 1 decimal
+            """
             if abs(x) >= 1e6:
-                return f"{x / 1e6:.1f}M"  # Format as millions with 1 decimal place
-            else:
-                return f"{x:.0f}"
+                return f"{x / 1e6:.1f}M"
+            return f"{x:.0f}"
 
-        # create a data frame that isolates out the production data just for the targeted well.
+
+        # Filter and prepare production data
         current_data_row = self.df_prod[self.df_prod['WellID'] == self.targeted_well]
-
-        # Sort the data by date
         current_data_row = current_data_row.sort_values(by='Date')
 
-        # Drop unneeded columns that never seem to sum up write, drop duplicates, sort values, reset index, etc
-        current_data_row = current_data_row.drop('Potential Cumulative Gas Profit', axis=1).drop('Cumulative Potential Gas Production (mcf)', axis=1).drop('Cumulative Potential Oil Production (bbl)', axis=1).drop('Potential Cumulative Oil Profit', axis=1)
+        # Remove cumulative columns for recalculation
+        drop_columns = ['Potential Cumulative Gas Profit', 'Cumulative Potential Gas Production (mcf)',
+                        'Cumulative Potential Oil Production (bbl)', 'Potential Cumulative Oil Profit']
+        current_data_row = current_data_row.drop(drop_columns, axis=1)
+
+        # Clean and process data
         current_data_row.drop_duplicates(keep='first', inplace=True)
-        current_data_row = current_data_row.sort_values(by='Date')
-        current_data_row = current_data_row.reset_index(drop=True)
-
-        # Edit the date so that the hours/minutes/sections is removed.
+        current_data_row = current_data_row.sort_values(by='Date').reset_index(drop=True)
         current_data_row['Date'] = current_data_row['Date'].str.slice(0, 7).str.pad(7, side='right')
 
-        # create new cumsum rows. Because it only seems to work here for some reason.
+        # Calculate cumulative values
         current_data_row['Potential Cumulative Gas Profit'] = current_data_row['Potential Gas Profit'].cumsum()
         current_data_row['Potential Cumulative Oil Profit'] = current_data_row['Potential Oil Profit'].cumsum()
         current_data_row['Cumulative Potential Oil Production (bbl)'] = current_data_row['Oil Volume (bbl)'].cumsum()
         current_data_row['Cumulative Potential Gas Production (mcf)'] = current_data_row['Gas Volume (mcf)'].cumsum()
 
-        # convert to a datatype data type
+        # Convert dates to datetime
         current_data_row['Date'] = pd.to_datetime(current_data_row['Date'])
 
-        # figure out what sort of production we're looking at. Oil or Gas?
+        # Determine production type and adjust tick density
         active_button_id = self.ui.prod_button_group.checkedId()
-
-        # This is for formatting the tick marks depending on how much data there is. If there's too many data points, the axes labels get merged together. That's bad.
         if len(current_data_row) > 10:
-            self.ax_prod_1.xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
-            self.ax_prod_2.xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
-            if active_button_id == -2:
-                self.current_prod = 'gas'
-            elif active_button_id == -3:
-                self.current_prod = 'oil'
+            for ax in [self.ax_prod_1, self.ax_prod_2]:
+                ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
+            self.current_prod = 'gas' if active_button_id == -2 else 'oil'
+
+        # Update plots based on production type
         if self.current_prod == 'oil':
-            self.ax_prod_1.set_title('Potential Profit')
-            self.ax_prod_2.set_title('Produced Oil (bbl)')
-            self.profit_line.set_data(current_data_row['Date'], current_data_row['Potential Oil Profit'])
-            self.profit_line_cum.set_data(current_data_row['Date'], current_data_row['Potential Cumulative Oil Profit'])
-            self.prod_line.set_data(current_data_row['Date'], current_data_row['Oil Volume (bbl)'])
-            self.prod_line_cum.set_data(current_data_row['Date'],
-                                        current_data_row['Cumulative Potential Oil Production (bbl)'])
+            self._update_oil_plots(current_data_row)
+        else:
+            self._update_gas_plots(current_data_row)
 
-            # Update labels if needed
-            self.profit_line.set_label('Monthly Oil Profit')
-            self.profit_line_cum.set_label('Cumulative Oil Profit')
-            self.prod_line.set_label('Monthly Oil Production')
-            self.prod_line_cum.set_label('Cumulative Oil Production')
+        # Configure axes formatting
+        for ax in [self.ax_prod_1, self.ax_prod_2]:
+            ax.xaxis.set_major_locator(mdates.YearLocator())
+            ax.xaxis.set_minor_locator(mdates.MonthLocator())
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+            ax.relim()
+            ax.autoscale_view()
+            ax.legend(loc='upper left', bbox_to_anchor=(-0.15, -0.25))
 
-        elif self.current_prod == 'gas':
-            self.ax_prod_1.set_title('Potential Profit')
-            self.ax_prod_2.set_title('Produced Gas Volume (mcf)')
-            self.profit_line.set_data(current_data_row['Date'], current_data_row['Potential Gas Profit'])
-            self.profit_line_cum.set_data(current_data_row['Date'], current_data_row['Potential Cumulative Gas Profit'])
-            self.prod_line.set_data(current_data_row['Date'], current_data_row['Gas Volume (mcf)'])
-            self.prod_line_cum.set_data(current_data_row['Date'],
-                                        current_data_row['Cumulative Potential Gas Production (mcf)'])
-
-            # Update labels if needed
-            self.profit_line.set_label('Monthly Gas Profit')
-            self.profit_line_cum.set_label('Cumulative Gas Profit')
-            self.prod_line.set_label('Monthly Gas Production')
-            self.prod_line_cum.set_label('Cumulative Gas Production')
-
-        # Create legends after all the plotting is done
-
-
-
-
-        # # Depending on if it's oil or gas, plot these dataframes and titles and stuff to match accordingly.
-        # if self.current_prod == 'oil':
-        #     self.ax_prod_1.set_title('Potential Profit')
-        #     self.ax_prod_2.set_title('Produced Oil  (bbl)')
-        #     self.profit_line.set_data(current_data_row['Date'], current_data_row['Potential Oil Profit'])
-        #     self.profit_line_cum.set_data(current_data_row['Date'], current_data_row['Potential Cumulative Oil Profit'])
-        #     self.prod_line.set_data(current_data_row['Date'], current_data_row['Oil Volume (bbl)'])
-        #     self.prod_line_cum.set_data(current_data_row['Date'], current_data_row['Cumulative Potential Oil Production (bbl)'])
-        #
-        # elif self.current_prod == 'gas':
-        #     self.ax_prod_1.set_title('Potential Profit')
-        #     self.ax_prod_2.set_title('Produced Gas Volume (mcf)')
-        #     self.profit_line.set_data(current_data_row['Date'], current_data_row['Potential Gas Profit'])
-        #     self.profit_line_cum.set_data(current_data_row['Date'], current_data_row['Potential Cumulative Gas Profit'])
-        #     self.prod_line.set_data(current_data_row['Date'], current_data_row['Gas Volume (mcf)'])
-        #     self.prod_line_cum.set_data(current_data_row['Date'], current_data_row['Cumulative Potential Gas Production (mcf)'])
-
-        # Format the axes some more
-        self.ax_prod_1.xaxis.set_major_locator(mdates.YearLocator())
-        self.ax_prod_1.xaxis.set_minor_locator(mdates.MonthLocator())
-        self.ax_prod_1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-        self.ax_prod_2.xaxis.set_major_locator(mdates.YearLocator())
-        self.ax_prod_2.xaxis.set_minor_locator(mdates.MonthLocator())
-        self.ax_prod_2.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-
-        # Work on the views and stuff.
-        self.ax_prod_1.relim()
-        self.ax_prod_1.autoscale_view()
-        self.ax_prod_2.relim()
-        self.ax_prod_2.autoscale_view()
+        # Apply custom formatting
         formatter = ScalarFormatter(useOffset=False)
         formatter.set_scientific(False)
         self.ax_prod_1.yaxis.set_major_formatter(FuncFormatter(millions_formatter))
-        handles1, labels1 = self.ax_prod_1.get_legend_handles_labels()
-        handles2, labels2 = self.ax_prod_2.get_legend_handles_labels()
-        self.ax_prod_1.legend(loc='upper left', bbox_to_anchor=(-0.15, -0.25))
-        self.ax_prod_2.legend(loc='upper left', bbox_to_anchor=(-0.15, -0.25))
-        # self.ax_prod_1.legend(handles=handles1, labels=labels1, loc='upper left', bbox_to_anchor=(-0.15, -0.25))
-        # self.ax_prod_2.legend(handles=handles2, labels=labels2, loc='upper left', bbox_to_anchor=(-0.15, -0.25))
-        # # First, verify your handles and labels existy
 
-
-        # Blit, draw, etc
-        self.canvas_prod_1.blit(self.ax_prod_1.bbox)
-        self.canvas_prod_2.blit(self.ax_prod_2.bbox)
-        self.canvas_prod_1.draw()
-        self.canvas_prod_2.draw()
-
+        # Update display
+        for canvas in [self.canvas_prod_1, self.canvas_prod_2]:
+            canvas.blit(canvas.figure.bbox)
+            canvas.draw()
+    # def drawProductionGraphic(self):
+    #     def millions_formatter(x, pos):
+    #         """Formats the y-axis tick labels to display millions."""
+    #         if abs(x) >= 1e6:
+    #             return f"{x / 1e6:.1f}M"  # Format as millions with 1 decimal place
+    #         else:
+    #             return f"{x:.0f}"
+    #
+    #     # create a data frame that isolates out the production data just for the targeted well.
+    #     current_data_row = self.df_prod[self.df_prod['WellID'] == self.targeted_well]
+    #
+    #     # Sort the data by date
+    #     current_data_row = current_data_row.sort_values(by='Date')
+    #
+    #     # Drop unneeded columns that never seem to sum up write, drop duplicates, sort values, reset index, etc
+    #     current_data_row = current_data_row.drop('Potential Cumulative Gas Profit', axis=1).drop('Cumulative Potential Gas Production (mcf)', axis=1).drop('Cumulative Potential Oil Production (bbl)', axis=1).drop('Potential Cumulative Oil Profit', axis=1)
+    #     current_data_row.drop_duplicates(keep='first', inplace=True)
+    #     current_data_row = current_data_row.sort_values(by='Date')
+    #     current_data_row = current_data_row.reset_index(drop=True)
+    #
+    #     # Edit the date so that the hours/minutes/sections is removed.
+    #     current_data_row['Date'] = current_data_row['Date'].str.slice(0, 7).str.pad(7, side='right')
+    #
+    #     # create new cumsum rows. Because it only seems to work here for some reason.
+    #     current_data_row['Potential Cumulative Gas Profit'] = current_data_row['Potential Gas Profit'].cumsum()
+    #     current_data_row['Potential Cumulative Oil Profit'] = current_data_row['Potential Oil Profit'].cumsum()
+    #     current_data_row['Cumulative Potential Oil Production (bbl)'] = current_data_row['Oil Volume (bbl)'].cumsum()
+    #     current_data_row['Cumulative Potential Gas Production (mcf)'] = current_data_row['Gas Volume (mcf)'].cumsum()
+    #
+    #     # convert to a datatype data type
+    #     current_data_row['Date'] = pd.to_datetime(current_data_row['Date'])
+    #
+    #     # figure out what sort of production we're looking at. Oil or Gas?
+    #     active_button_id = self.ui.prod_button_group.checkedId()
+    #
+    #     # This is for formatting the tick marks depending on how much data there is. If there's too many data points, the axes labels get merged together. That's bad.
+    #     if len(current_data_row) > 10:
+    #         self.ax_prod_1.xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
+    #         self.ax_prod_2.xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
+    #         if active_button_id == -2:
+    #             self.current_prod = 'gas'
+    #         elif active_button_id == -3:
+    #             self.current_prod = 'oil'
+    #     if self.current_prod == 'oil':
+    #         self.ax_prod_1.set_title('Potential Profit')
+    #         self.ax_prod_2.set_title('Produced Oil (bbl)')
+    #         self.profit_line.set_data(current_data_row['Date'], current_data_row['Potential Oil Profit'])
+    #         self.profit_line_cum.set_data(current_data_row['Date'], current_data_row['Potential Cumulative Oil Profit'])
+    #         self.prod_line.set_data(current_data_row['Date'], current_data_row['Oil Volume (bbl)'])
+    #         self.prod_line_cum.set_data(current_data_row['Date'],
+    #                                     current_data_row['Cumulative Potential Oil Production (bbl)'])
+    #
+    #         # Update labels if needed
+    #         self.profit_line.set_label('Monthly Oil Profit')
+    #         self.profit_line_cum.set_label('Cumulative Oil Profit')
+    #         self.prod_line.set_label('Monthly Oil Production')
+    #         self.prod_line_cum.set_label('Cumulative Oil Production')
+    #
+    #     elif self.current_prod == 'gas':
+    #         self.ax_prod_1.set_title('Potential Profit')
+    #         self.ax_prod_2.set_title('Produced Gas Volume (mcf)')
+    #         self.profit_line.set_data(current_data_row['Date'], current_data_row['Potential Gas Profit'])
+    #         self.profit_line_cum.set_data(current_data_row['Date'], current_data_row['Potential Cumulative Gas Profit'])
+    #         self.prod_line.set_data(current_data_row['Date'], current_data_row['Gas Volume (mcf)'])
+    #         self.prod_line_cum.set_data(current_data_row['Date'],
+    #                                     current_data_row['Cumulative Potential Gas Production (mcf)'])
+    #
+    #         # Update labels if needed
+    #         self.profit_line.set_label('Monthly Gas Profit')
+    #         self.profit_line_cum.set_label('Cumulative Gas Profit')
+    #         self.prod_line.set_label('Monthly Gas Production')
+    #         self.prod_line_cum.set_label('Cumulative Gas Production')
+    #
+    #     self.ax_prod_1.xaxis.set_major_locator(mdates.YearLocator())
+    #     self.ax_prod_1.xaxis.set_minor_locator(mdates.MonthLocator())
+    #     self.ax_prod_1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    #     self.ax_prod_2.xaxis.set_major_locator(mdates.YearLocator())
+    #     self.ax_prod_2.xaxis.set_minor_locator(mdates.MonthLocator())
+    #     self.ax_prod_2.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    #
+    #     # Work on the views and stuff.
+    #     self.ax_prod_1.relim()
+    #     self.ax_prod_1.autoscale_view()
+    #     self.ax_prod_2.relim()
+    #     self.ax_prod_2.autoscale_view()
+    #     formatter = ScalarFormatter(useOffset=False)
+    #     formatter.set_scientific(False)
+    #     self.ax_prod_1.yaxis.set_major_formatter(FuncFormatter(millions_formatter))
+    #     self.ax_prod_1.legend(loc='upper left', bbox_to_anchor=(-0.15, -0.25))
+    #     self.ax_prod_2.legend(loc='upper left', bbox_to_anchor=(-0.15, -0.25))
+    #     # Blit, draw, etc
+    #     self.canvas_prod_1.blit(self.ax_prod_1.bbox)
+    #     self.canvas_prod_2.blit(self.ax_prod_2.bbox)
+    #     self.canvas_prod_1.draw()
+    #     self.canvas_prod_2.draw()
+    #
     """This function is used to open the .db file and then process the found data accordingly, depteending on which tables and datasets are used."""
 
-    def load_data2(self):
-        # Load the data for the oil and gas fields
+    def load_data2(self) -> None:
+        """
+        Initializes and loads all necessary data from the database for well visualization.
+
+        Loads and processes multiple datasets including field information, ownership data,
+        directional surveys, well data, and production history. Establishes core data
+        structures needed for visualization and analysis.
+
+        Side Effects:
+            - Populates multiple DataFrame attributes:
+                self.df_field: Field information
+                self.df_owner: Ownership records
+                self.df_prod: Production data
+                self.dx_data: Directional survey data
+            - Sets unique identifiers:
+                self.used_dockets: Unique board docket numbers
+                self.used_years: Unique years in dataset
+
+        Dependencies:
+            - Requires active database connection in self.conn_db
+            - Helper methods:
+                - loadDfFields(): Processes field data
+                - loadBoardData(): Loads board meeting data
+                - loadPlatData(): Processes plat information
+                - loadDirectionalData(): Loads directional survey data
+                - loadWellData(): Processes well-specific information
+
+        Notes:
+            - Database must contain tables: Field, Owner, Production
+            - Removes duplicate production records
+            - Preserves original data structure for visualization
+            - Critical for initializing visualization components
+        """
+        # Load field and ownership base data
         self.df_field = read_sql('select * from Field', self.conn_db)
         self.df_owner = read_sql('select * from Owner', self.conn_db)
-        self.loadDfFields()
-        self.loadBoardData()
-        self.loadPlatData()
+
+        # Process core datasets through helper functions
+        self.loadDfFields()  # Process field information
+        self.loadBoardData()  # Load board meeting records
+        self.loadPlatData()  # Process plat mapping data
+
+        # Load and process directional survey data
         dx_data_unique = self.loadDirectionalData()
         self.loadWellData(dx_data_unique)
 
+        # Extract unique identifiers for filtering
         self.used_dockets = self.dx_data['Board_Docket'].unique()
         self.used_years = self.dx_data['Board_Year'].unique()
+
+        # Load and clean production data
         self.df_prod = read_sql('select * from Production', self.conn_db)
         self.df_prod.drop_duplicates(keep='first', inplace=True)
 
 
-    def loadPlatData(self):
+    # def load_data2(self):
+    #     # Load the data for the oil and gas fields
+    #     self.df_field = read_sql('select * from Field', self.conn_db)
+    #     self.df_owner = read_sql('select * from Owner', self.conn_db)
+    #     self.loadDfFields()
+    #     self.loadBoardData()
+    #     self.loadPlatData()
+    #     dx_data_unique = self.loadDirectionalData()
+    #     self.loadWellData(dx_data_unique)
+    #
+    #     self.used_dockets = self.dx_data['Board_Docket'].unique()
+    #     self.used_years = self.dx_data['Board_Year'].unique()
+    #     self.df_prod = read_sql('select * from Production', self.conn_db)
+    #     self.df_prod.drop_duplicates(keep='first', inplace=True)
+
+    def loadPlatData(self) -> None:
+        """
+        Loads and processes plat (land survey) data from database, converting geographic
+        coordinates to UTM projection and creating geometry objects.
+
+        Loads plat and adjacent plat data from database tables, removes duplicates and
+        invalid coordinates, then transforms coordinates from Lat/Lon to UTM projection
+        for spatial analysis.
+
+        Side Effects:
+            - Creates/Updates following DataFrame attributes:
+                self.df_plat: Primary plat data with columns:
+                    - Lat: float - Latitude coordinates
+                    - Lon: float - Longitude coordinates
+                    - Easting: float - UTM easting coordinate
+                    - Northing: float - UTM northing coordinate
+                    - geometry: Point - Shapely Point geometry
+                self.df_adjacent_plats: Adjacent plat reference data
+
+        Notes:
+            - Requires active database connection in self.conn_db
+            - Removes rows with null Lat/Lon values
+            - Converts geographic coordinates to UTM projection
+            - Creates Shapely Point geometries for spatial operations
+            - Database must contain tables: PlatData, Adjacent
+
+        Dependencies:
+            - utm package for coordinate transformation
+            - shapely.geometry for spatial objects
+        """
+        # Load raw plat data from database
         self.df_plat = read_sql('select * from PlatData', self.conn_db)
         self.df_adjacent_plats = read_sql('select * from Adjacent', self.conn_db)
+
+        # Clean plat data by removing duplicates and invalid coordinates
         self.df_plat.drop_duplicates(keep='first', inplace=True)
         self.df_plat = self.df_plat.dropna(subset=['Lat', 'Lon'])
-        # anywhere the condition is met, adjust the well age to 0
 
-        self.df_plat['Easting'], self.df_plat['Northing'] = zip(*self.df_plat.apply(lambda row: utm.from_latlon(row['Lat'], row['Lon'])[:2], axis=1))
-        self.df_plat['geometry'] = self.df_plat.apply(lambda row: Point(row['Easting'], row['Northing']), axis=1)
+        # Convert geographic coordinates (Lat/Lon) to UTM projection (Easting/Northing)
+        self.df_plat['Easting'], self.df_plat['Northing'] = zip(
+            *self.df_plat.apply(
+                lambda row: utm.from_latlon(row['Lat'], row['Lon'])[:2],
+                axis=1
+            )
+        )
 
-    def loadDfFields(self):
-        adjacent_fields = []
-        # Generate a geometry column based on turning easting and northing into shapely points. This is used later for assembling pandas columns of LineStrings
-        self.df_field['geometry'] = self.df_field.apply(lambda row: Point(row['Easting'], row['Northing']), axis=1)
+        # Create Shapely Point geometries for spatial analysis
+        self.df_plat['geometry'] = self.df_plat.apply(
+            lambda row: Point(row['Easting'], row['Northing']),
+            axis=1
+        )
 
-        # Filter down to specific fields
+    # def loadPlatData(self):
+    #     self.df_plat = read_sql('select * from PlatData', self.conn_db)
+    #     self.df_adjacent_plats = read_sql('select * from Adjacent', self.conn_db)
+    #     self.df_plat.drop_duplicates(keep='first', inplace=True)
+    #     self.df_plat = self.df_plat.dropna(subset=['Lat', 'Lon'])
+    #     # anywhere the condition is met, adjust the well age to 0
+    #
+    #     self.df_plat['Easting'], self.df_plat['Northing'] = zip(*self.df_plat.apply(lambda row: utm.from_latlon(row['Lat'], row['Lon'])[:2], axis=1))
+    #     self.df_plat['geometry'] = self.df_plat.apply(lambda row: Point(row['Easting'], row['Northing']), axis=1)
+
+    def loadDfFields(self) -> None:
+        """
+        Processes field data to create geometric representations and identify adjacent fields.
+
+        Converts field coordinates to geometric objects, creates field polygons, and identifies
+        neighboring fields using spatial analysis. Uses a buffer zone to determine field
+        adjacency relationships.
+
+        Side Effects:
+            - Creates/Updates following attributes:
+                self.df_field: Enhanced with geometry column
+                self.df_adjacent_fields: DataFrame containing adjacent field relationships
+                    Columns:
+                    - Field_Name: str - Name of the reference field
+                    - adjacent_Field_Name: str - Name of the neighboring field
+
+        Notes:
+            - Requires self.df_field to contain:
+                - Field_Name: str
+                - Easting: float - UTM easting coordinate
+                - Northing: float - UTM northing coordinate
+            - Uses 10-unit buffer for intersection detection
+            - Creates point geometries for individual locations
+            - Generates polygons for field boundaries
+
+        Implementation Details:
+            - Creates point geometries from coordinates
+            - Groups coordinates by field to create field polygons
+            - Uses spatial buffer of 10 units to detect field intersections
+            - Identifies and stores all adjacent field relationships
+        """
+        # Initialize storage for adjacent field relationships
+        adjacent_fields: List[Dict[str, str]] = []
+
+        # Create point geometries for field locations
+        self.df_field['geometry'] = self.df_field.apply(
+            lambda row: Point(row['Easting'], row['Northing']),
+            axis=1
+        )
+
+        # Extract relevant fields for polygon creation
         used_fields = self.df_field[['Field_Name', 'Easting', 'Northing']]
 
-        # Create polygons for each field
-        polygons = used_fields.groupby('Field_Name').apply(lambda x: Polygon(zip(x['Easting'], x['Northing'])), include_groups=False).reset_index()
-
-
+        # Generate field polygons from coordinate groups
+        polygons = used_fields.groupby('Field_Name').apply(
+            lambda x: Polygon(zip(x['Easting'], x['Northing'])),
+            include_groups=False
+        ).reset_index()
         polygons.columns = ['Field_Name', 'geometry']
-        # Create GeoDataFrame
+
+        # Create GeoDataFrame with buffer zones
         gdf = gpd.GeoDataFrame(polygons, geometry='geometry')
-        gdf['buffer'] = gdf['geometry'].buffer(10)  # create a buffer of 10 units for purposes of finding intersections
+        gdf['buffer'] = gdf['geometry'].buffer(10)
 
-        # Find adjacent fields
-        for _, row in gdf.iterrows():  # loop while ignoring the index
-            neighbors = gdf[gdf['buffer'].intersects(row['geometry'])]['Field_Name'].tolist()  # filter out only where neighbors exist.
-            neighbors.remove(row['Field_Name'])  # remove field name
-            adjacent_fields.extend([{'Field_Name': row['Field_Name'], 'adjacent_Field_Name': neighbor} for neighbor in neighbors])  # extent the data out in adjacent fields so we have a list of fields and adjacent fields
+        # Identify adjacent fields using spatial analysis
+        for _, row in gdf.iterrows():
+            # Find neighboring fields using buffer intersection
+            neighbors = gdf[gdf['buffer'].intersects(row['geometry'])]['Field_Name'].tolist()
+            neighbors.remove(row['Field_Name'])  # Remove self-reference
 
-        self.df_adjacent_fields = pd.DataFrame(adjacent_fields)  # turn it into a data frame.
+            # Create adjacency relationships
+            adjacent_fields.extend([
+                {'Field_Name': row['Field_Name'], 'adjacent_Field_Name': neighbor}
+                for neighbor in neighbors
+            ])
 
-    """Load the board data, the links, etc. Add in the concatenation data for ease of reference"""
+        # Convert adjacency list to DataFrame
+        self.df_adjacent_fields = pd.DataFrame(adjacent_fields)
 
-    def loadBoardData(self):
+
+    # def loadDfFields(self):
+    #     adjacent_fields = []
+    #     # Generate a geometry column based on turning easting and northing into shapely points. This is used later for assembling pandas columns of LineStrings
+    #     self.df_field['geometry'] = self.df_field.apply(lambda row: Point(row['Easting'], row['Northing']), axis=1)
+    #
+    #     # Filter down to specific fields
+    #     used_fields = self.df_field[['Field_Name', 'Easting', 'Northing']]
+    #
+    #     # Create polygons for each field
+    #     polygons = used_fields.groupby('Field_Name').apply(lambda x: Polygon(zip(x['Easting'], x['Northing'])), include_groups=False).reset_index()
+    #
+    #
+    #     polygons.columns = ['Field_Name', 'geometry']
+    #     # Create GeoDataFrame
+    #     gdf = gpd.GeoDataFrame(polygons, geometry='geometry')
+    #     gdf['buffer'] = gdf['geometry'].buffer(10)  # create a buffer of 10 units for purposes of finding intersections
+    #
+    #     # Find adjacent fields
+    #     for _, row in gdf.iterrows():  # loop while ignoring the index
+    #         neighbors = gdf[gdf['buffer'].intersects(row['geometry'])]['Field_Name'].tolist()  # filter out only where neighbors exist.
+    #         neighbors.remove(row['Field_Name'])  # remove field name
+    #         adjacent_fields.extend([{'Field_Name': row['Field_Name'], 'adjacent_Field_Name': neighbor} for neighbor in neighbors])  # extent the data out in adjacent fields so we have a list of fields and adjacent fields
+    #
+    #     self.df_adjacent_fields = pd.DataFrame(adjacent_fields)  # turn it into a data frame.
+
+    def loadBoardData(self) -> None:
+        """
+        Loads board data and links from database, adding concatenated location codes.
+
+        Retrieves board meeting records and associated links from database, then adds
+        concatenated location codes by combining section, township, range, and meridian
+        information for easier reference and filtering.
+
+        Side Effects:
+            - Creates/Updates following DataFrame attributes:
+                self.df_BoardData: Primary board data with columns:
+                    - Sec: int - Section number
+                    - Township: int - Township number
+                    - TownshipDir: str - Township direction (N/S)
+                    - Range: int - Range number
+                    - RangeDir: str - Range direction (E/W)
+                    - PM: str - Principal Meridian
+                    - Conc: str - Concatenated location code
+                self.df_BoardDataLinks: Links related to board data
+
+        Notes:
+            - Requires active database connection in self.conn_db
+            - Uses ModuleAgnostic.reTranslateData for location code generation
+            - Database must contain tables: BoardData, BoardDataLinks
+
+        Dependencies:
+            - ModuleAgnostic module for location code translation
+            - Active database connection with required tables
+        """
+        # Load board meeting records and associated links
         self.df_BoardData = read_sql('select * from BoardData', self.conn_db)
         self.df_BoardDataLinks = read_sql('select * from BoardDataLinks', self.conn_db)
-        # Add in the conc codes for tsr sections for ease of reference.
-        self.df_BoardData['Conc'] = self.df_BoardData[['Sec', 'Township', 'TownshipDir', 'Range', 'RangeDir', 'PM']].apply(lambda x: ma.reTranslateData(x), axis=1)
 
-    """Load the directional data and then process it"""
+        # Generate concatenated location codes using ModuleAgnostic translator
+        self.df_BoardData['Conc'] = self.df_BoardData[[
+            'Sec', 'Township', 'TownshipDir',
+            'Range', 'RangeDir', 'PM'
+        ]].apply(lambda x: self.reTranslateData(x), axis=1)
 
-    def loadDirectionalData(self):
-        translated_fields = {'AAGARD RANCH': 'AAGARD RANCH FIELD', 'ANDERSON JUNCTION': 'ANDERSON JUNCTION FIELD', 'ANSCHUTZ RANCH WEBER': 'ANSCHUTZ RANCH (WEBER) FIELD', 'BAR X': 'BAR X FIELD', 'BIG FLAT': 'BIG FLAT FIELD', 'BIG FLAT WEST': 'BIG FLAT WEST FIELD', 'BIG INDIAN SOUTH': 'BIG INDIAN (SOUTH) FIELD', 'BONANZA': 'BONANZA FIELD', 'BOUNDARY BUTTE': 'BOUNDARY BUTTE FIELD', 'BRADFORD CYN': 'BRADFORD CANYON FIELD', 'BUZZARD BENCH': 'BUZZARD BENCH FIELD', 'CABALLO': 'CABALLO FIELD',
+    # def loadBoardData(self):
+    #     self.df_BoardData = read_sql('select * from BoardData', self.conn_db)
+    #     self.df_BoardDataLinks = read_sql('select * from BoardDataLinks', self.conn_db)
+    #     # Add in the conc codes for tsr sections for ease of reference.
+    #     self.df_BoardData['Conc'] = self.df_BoardData[['Sec', 'Township', 'TownshipDir', 'Range', 'RangeDir', 'PM']].apply(lambda x: ma.reTranslateData(x), axis=1)
+    #
+    # """Load the directional data and then process it"""
+
+
+
+    def loadDirectionalData(self) -> DataFrame:
+        """
+        Loads and processes directional well data from database, performing data cleanup
+        and standardization.
+
+        Loads well information, removes plugged wells, standardizes field names, and calculates
+        well ages. Processes dates and creates display names for wells.
+
+        Args:
+            None
+
+        Returns:
+            DataFrame: Processed well data with unique WellIDs containing columns:
+                - WellID: str - Unique identifier for well
+                - WellName: str - Name of the well
+                - DisplayName: str - Combined WellID and WellName for UI display
+                - Operator: str - Well operator name
+                - WorkType: str - Type of well work being performed
+                - DrySpud: str - Formatted spud date (YYYY-MM-DD)
+                - WellAge: int - Age of well in months
+                - CurrentWellStatus: str - Current status of well
+                - FieldName: str - Standardized field name
+                - Board_Year: int - Year of board approval
+                - Docket_Month: str - Month of board approval
+
+        Side Effects:
+            - Creates/Updates self.dx_data with processed well information
+
+        Notes:
+            - Filters out plugged wells (WorkType = 'PLUG')
+            - Removes duplicate entries
+            - Standardizes field names using translation dictionary
+            - Calculates well age in months from spud date
+            - Sets well age to 0 for approved permits without spud dates
+        """
+        # Define field name translations for standardization
+        translated_fields: Dict[str, str] = {'AAGARD RANCH': 'AAGARD RANCH FIELD', 'ANDERSON JUNCTION': 'ANDERSON JUNCTION FIELD', 'ANSCHUTZ RANCH WEBER': 'ANSCHUTZ RANCH (WEBER) FIELD', 'BAR X': 'BAR X FIELD', 'BIG FLAT': 'BIG FLAT FIELD', 'BIG FLAT WEST': 'BIG FLAT WEST FIELD', 'BIG INDIAN SOUTH': 'BIG INDIAN (SOUTH) FIELD', 'BONANZA': 'BONANZA FIELD', 'BOUNDARY BUTTE': 'BOUNDARY BUTTE FIELD', 'BRADFORD CYN': 'BRADFORD CANYON FIELD', 'BUZZARD BENCH': 'BUZZARD BENCH FIELD', 'CABALLO': 'CABALLO FIELD',
                              'CACTUS PARK': 'CACTUS PARK FIELD', 'CHOKECHERRY CYN': 'CHOKECHERRY CANYON FIELD', 'CLAY HILL': 'CLAY HILL FIELD', 'CLEAR CREEK': 'CLEAR CREEK FIELD', 'DARK CANYON': 'DARK CANYON FIELD', 'DESERT CREEK': 'DESERT CREEK FIELD', 'ELKHORN': 'ELKHORN FIELD', 'FARNHAM DOME': 'FARNHAM DOME FIELD', 'FENCE CANYON': 'FENCE CANYON FIELD', 'GREATER CISCO': 'GREATER CISCO FIELD', 'HALFWAY HOLLOW': 'HALFWAY HOLLOW FIELD', 'HATCH POINT': 'HATCH POINT FIELD', 'HOGAN': 'HOGAN FIELD',
                              'HOGBACK RIDGE': 'HOGBACK RIDGE FIELD', 'HORSEHEAD POINT': 'HORSEHEAD POINT FIELD', 'HORSESHOE BEND': 'HORSESHOE BEND FIELD', 'ICE CANYON (DK-MR)': 'ICE CANYON FIELD', 'LAKE CANYON': 'LAKE CANYON FIELD', 'LAST CHANCE': 'LAST CHANCE FIELD', 'LODGEPOLE': 'LODGEPOLE FIELD', 'MAIN CANYON': 'MAIN CANYON FIELD', 'MANCOS FLAT': 'MANCOS FLAT FIELD', 'MCELMO MESA': 'MCELMO MESA FIELD', 'NAVAJO CANYON': 'NAVAJO CANYON FIELD', 'NORTH MYTON BENCH': 'NORTH MYTON BENCH',
                              'PARIETTE BENCH': 'PARIETTE BENCH FIELD', 'PARK ROAD': 'PARK ROAD FIELD', 'PETERS POINT': 'PETERS POINT FIELD', 'PETES WASH': 'PETES WASH FIELD', 'RABBIT EARS': 'RABBIT EARS FIELD', 'RANDLETT': 'RANDLETT FIELD', 'ROBIDOUX': 'ROBIDOUX FIELD', 'ROCK HOUSE': 'ROCK HOUSE FIELD', 'RUNWAY': 'RUNWAY FIELD', 'SEGUNDO CANYON': 'SEGUNDO CANYON FIELD', 'SOUTH PINE RIDGE': 'SOUTH PINE RIDGE FIELD', 'STRAWBERRY': 'STRAWBERRY FIELD', 'SWEET WATER RIDGE': 'SWEETWATER RIDGE FIELD',
@@ -6842,137 +7835,317 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
                              'PROVIDENCE': 'PROVIDENCE FIELD', 'RECAPTURE POCKET': 'RECAPTURE POCKET FIELD', 'RIVER BANK': 'RIVER BANK FIELD', 'ROAD CANYON': 'ROAD CANYON FIELD', 'ROZEL POINT': 'ROZEL POINT FIELD', 'SEEP RIDGE B (DKTA)': 'SEEP RIDGE B FIELD', 'SQUAW CANYON': 'SQUAW CANYON FIELD', 'STARR FLAT': 'STARR FLAT FIELD', 'STATELINE': 'STATE LINE FIELD', 'TEN MILE': 'TEN MILE FIELD', 'THREE RIVERS': 'THREE RIVERS FIELD', 'UPPER VALLEY': 'UPPER VALLEY FIELD',
                              'WEST WILLOW CREEK': 'WEST WILLOW CREEK FIELD', 'WHISKEY CREEK': 'WHISKEY CREEK FIELD', 'WILSON CANYON': 'WILSON CANYON FIELD', 'WOLF POINT': 'WOLF POINT FIELD', 'TABYAGO': 'TABYAGO CANYON FIELD', 'KIVA': 'KIVA FIELD', 'AKAH': 'AKAH FIELD', 'BUG': 'BUG FIELD', 'LOVE': 'LOVE FIELD', '12 MILE WASH': 'TWELVE MILE WASH FIELD'}
 
-        month_dict = {'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5,
-                      'June': 6, 'July': 7, 'August': 8, 'September': 9, 'October': 10,
-                      'November': 11, 'December': 12}
-        # Load the data
+        # Define month name to number mapping
+        month_dict: Dict[str, int] = {
+            'January': 1, 'February': 2, 'March': 3, 'April': 4,
+            'May': 5, 'June': 6, 'July': 7, 'August': 8,
+            'September': 9, 'October': 10, 'November': 11, 'December': 12
+        }
+
+        # Load and initial processing of well data
         self.dx_data = read_sql('select * from WellInfo', self.conn_db)
         self.dx_data = self.dx_data.rename(columns={'entityname': 'Operator'})
-        # Drop any plugged data and duplicates
+
+        # Remove plugged wells and duplicates
         self.dx_data = self.dx_data[self.dx_data['WorkType'] != 'PLUG']
         self.dx_data.drop_duplicates(keep='first', inplace=True)
-        # Create a new column, display name, for displaying in the combo boxes
+
+        # Create display names for wells
         self.dx_data['DisplayName'] = self.dx_data['WellID'].astype(str) + ' - ' + self.dx_data['WellName'].astype(str)
 
-        # Convert to a datetime type and adjust accordingly for well age (in months)
+        # Process dates and calculate well age
         self.dx_data['DrySpud'] = to_datetime(self.dx_data['DrySpud'])
-        self.dx_data['WellAge'] = (datetime.now().year - self.dx_data['DrySpud'].dt.year) * 12 + datetime.now().month - self.dx_data['DrySpud'].dt.month
+        self.dx_data['WellAge'] = (datetime.now().year - self.dx_data['DrySpud'].dt.year) * 12 + datetime.now().month - \
+                                  self.dx_data['DrySpud'].dt.month
         self.dx_data['DrySpud'] = self.dx_data['DrySpud'].dt.strftime('%Y-%m-%d')
 
-        # Convert to a datetime type and adjust accordingly for well age (in months)
-
-        # Conditional for non-existant well age and approved permits (IE, stuff that is planned)
+        # Set well age to 0 for approved permits without spud dates
         condition = pd.isna(self.dx_data['WellAge']) & (self.dx_data['CurrentWellStatus'] == 'Approved Permit')
-
-        # anywhere the condition is met, adjust the well age to 0
         self.dx_data.loc[condition, 'WellAge'] = 0
-        # Add it to an actual month value (since I can't find any way to sort by months because I'm ignorant)
+
+        # Sort by month and year
         self.dx_data['month_order'] = self.dx_data['Docket_Month'].map(month_dict)
-
-        # Sort by the month order
         df_sorted = self.dx_data.sort_values(by=['Board_Year', 'month_order'])
-
-        # Drop that column
         self.dx_data = df_sorted.drop('month_order', axis=1)
 
-        # Add in the fieldname, adjusted for what the official AGRC data lists the field names at
+        # Standardize field names
         self.dx_data['FieldName'] = self.dx_data['FieldName'].map(translated_fields)
+
+        # Return unique wells only
         dx_data_unique = self.dx_data.drop_duplicates(subset=['WellID'])
         return dx_data_unique
 
-    """Load the actual data for the well. All sorts of non-directional parameters"""
 
-    def loadWellData(self, dx_data_unique):
+    # def loadDirectionalData(self):
+    #     translated_fields = {'AAGARD RANCH': 'AAGARD RANCH FIELD', 'ANDERSON JUNCTION': 'ANDERSON JUNCTION FIELD', 'ANSCHUTZ RANCH WEBER': 'ANSCHUTZ RANCH (WEBER) FIELD', 'BAR X': 'BAR X FIELD', 'BIG FLAT': 'BIG FLAT FIELD', 'BIG FLAT WEST': 'BIG FLAT WEST FIELD', 'BIG INDIAN SOUTH': 'BIG INDIAN (SOUTH) FIELD', 'BONANZA': 'BONANZA FIELD', 'BOUNDARY BUTTE': 'BOUNDARY BUTTE FIELD', 'BRADFORD CYN': 'BRADFORD CANYON FIELD', 'BUZZARD BENCH': 'BUZZARD BENCH FIELD', 'CABALLO': 'CABALLO FIELD',
+    #                          'CACTUS PARK': 'CACTUS PARK FIELD', 'CHOKECHERRY CYN': 'CHOKECHERRY CANYON FIELD', 'CLAY HILL': 'CLAY HILL FIELD', 'CLEAR CREEK': 'CLEAR CREEK FIELD', 'DARK CANYON': 'DARK CANYON FIELD', 'DESERT CREEK': 'DESERT CREEK FIELD', 'ELKHORN': 'ELKHORN FIELD', 'FARNHAM DOME': 'FARNHAM DOME FIELD', 'FENCE CANYON': 'FENCE CANYON FIELD', 'GREATER CISCO': 'GREATER CISCO FIELD', 'HALFWAY HOLLOW': 'HALFWAY HOLLOW FIELD', 'HATCH POINT': 'HATCH POINT FIELD', 'HOGAN': 'HOGAN FIELD',
+    #                          'HOGBACK RIDGE': 'HOGBACK RIDGE FIELD', 'HORSEHEAD POINT': 'HORSEHEAD POINT FIELD', 'HORSESHOE BEND': 'HORSESHOE BEND FIELD', 'ICE CANYON (DK-MR)': 'ICE CANYON FIELD', 'LAKE CANYON': 'LAKE CANYON FIELD', 'LAST CHANCE': 'LAST CHANCE FIELD', 'LODGEPOLE': 'LODGEPOLE FIELD', 'MAIN CANYON': 'MAIN CANYON FIELD', 'MANCOS FLAT': 'MANCOS FLAT FIELD', 'MCELMO MESA': 'MCELMO MESA FIELD', 'NAVAJO CANYON': 'NAVAJO CANYON FIELD', 'NORTH MYTON BENCH': 'NORTH MYTON BENCH',
+    #                          'PARIETTE BENCH': 'PARIETTE BENCH FIELD', 'PARK ROAD': 'PARK ROAD FIELD', 'PETERS POINT': 'PETERS POINT FIELD', 'PETES WASH': 'PETES WASH FIELD', 'RABBIT EARS': 'RABBIT EARS FIELD', 'RANDLETT': 'RANDLETT FIELD', 'ROBIDOUX': 'ROBIDOUX FIELD', 'ROCK HOUSE': 'ROCK HOUSE FIELD', 'RUNWAY': 'RUNWAY FIELD', 'SEGUNDO CANYON': 'SEGUNDO CANYON FIELD', 'SOUTH PINE RIDGE': 'SOUTH PINE RIDGE FIELD', 'STRAWBERRY': 'STRAWBERRY FIELD', 'SWEET WATER RIDGE': 'SWEETWATER RIDGE FIELD',
+    #                          'TOHONADLA': 'TOHONADLA FIELD', 'UCOLO': 'UCOLO FIELD', 'UTELAND BUTTE': 'UTELAND BUTTE FIELD', 'WHITE MESA': 'WHITE MESA FIELD', 'WILD STALLION': 'WILD STALLION FIELD', 'WINDY RIDGE': 'WINDY RIDGE FIELD', 'WONSITS VALLEY': 'WONSITS VALLEY FIELD', 'WOODSIDE': 'WOODSIDE FIELD', '8 MILE FLAT NORTH': 'EIGHT MILE FLAT NORTH FIELD', 'AGENCY DRAW': 'AGENCY DRAW FIELD', 'ALKALI CANYON': 'ALKALI CANYON FIELD', 'ALTAMONT': 'ALTAMONT FIELD', 'ANETH': 'ANETH FIELD',
+    #                          'ANTELOPE CREEK': 'ANTELOPE CREEK FIELD', 'BIG VALLEY': 'BIG VALLEY FIELD', 'BLUEBELL': 'BLUEBELL FIELD', 'BLUFF': 'BLUFF FIELD', 'BLUFF BENCH': 'BLUFF BENCH FIELD', 'BRIDGELAND': 'BRIDGELAND FIELD', 'BRIDGER LAKE': 'BRIDGER LAKE FIELD', 'BRUNDAGE CANYON': 'BRUNDAGE CANYON FIELD', 'BUCK CANYON': 'BUCK CANYON FIELD', 'BUSHY': 'BUSHY FIELD', 'CEDAR CAMP': 'CEDAR CAMP FIELD', 'CHEROKEE': 'CHEROKEE FIELD', 'CHINLE WASH': 'CHINLE WASH FIELD',
+    #                          'CISCO DOME': 'CISCO DOME FIELD', 'CLAY BASIN': 'CLAY BASIN FIELD', 'CLEFT': 'CLEFT FIELD', 'CONE ROCK': 'CONE ROCK FIELD', 'COVENANT': 'COVENANT FIELD', 'COWBOY': 'COWBOY FIELD', 'DAVIS CANYON': 'DAVIS CANYON FIELD', 'DEAD MAN CANYON': 'DEADMAN CANYON FIELD', 'DEADMAN-ISMY': 'DEADMAN (ISMAY) FIELD', 'DELTA SALT CAVERN STORAGE': 'DELTA SALT CAVERN STORAGE FIELD', 'DEVILS PLAYGROUND': "DEVIL'S PLAYGROUND FIELD", 'DRY BURN': 'DRY BURN FIELD',
+    #                          'EAST CANYON': 'EAST CANYON FIELD', 'EVACUATION CREEK': 'EVACUATION CREEK FIELD', 'FARMINGTON': 'FARMINGTON FIELD', 'GRASSY TRAIL': 'GRASSY TRAIL FIELD', 'GRAYSON': 'GRAYSON FIELD', 'GUSHER': 'GUSHER FIELD', 'HATCH': 'HATCH FIELD', "HELL'S HOLE": "HELL'S HOLE FIELD", 'HELPER': 'HELPER FIELD', 'HORSE CANYON': 'HORSE CANYON FIELD', 'INDEPENDENCE': 'INDEPENDENCE FIELD', 'KACHINA': 'KACHINA FIELD', 'KICKER': 'KICKER FIELD', 'LIGHTNING DRAW': 'LIGHTNING DRAW FIELD',
+    #                          'LION MESA': 'LION MESA FIELD', 'LISBON': 'LISBON FIELD', 'MC CRACKEN SPRING': 'MCCRACKEN SPRING FIELD', 'MOAB GAS STORAGE': 'MOAB GAS STORAGE', 'MONUMENT': 'MONUMENT FIELD', 'MONUMENT BUTTE': 'MONUMENT BUTTE FIELD', 'MUSTANG FLAT': 'MUSTANG FLAT FIELD', 'NATURAL BUTTES': 'NATURAL BUTTES FIELD', 'NINE MILE CANYON': 'NINE MILE CANYON FIELD', 'NORTH BONANZA': 'NORTH BONANZA FIELD', 'PAIUTE KNOLL': 'PAIUTE KNOLL FIELD', 'PEAR PARK': 'PEAR PARK FIELD',
+    #                          'POWDER SPRINGS': 'POWDER SPRINGS FIELD', 'RAT HOLE CANYON': 'RAT HOLE CANYON FIELD', 'RECAPTURE CREEK': 'RECAPTURE CREEK FIELD', 'ROCKWELL FLAT': 'ROCKWELL FLAT FIELD', 'SAN ARROYO': 'SAN ARROYO FIELD', 'SEEP RIDGE': 'SEEP RIDGE FIELD', 'SHUMWAY POINT': 'SHUMWAY POINT FIELD', 'SODA SPRING': 'SODA SPRING FIELD', 'SOLDIER CREEK': 'SOLDIER CREEK FIELD', 'SOUTH ISMAY': 'SOUTH ISMAY FIELD', 'SOWERS CANYON': 'SOWER CANYON FIELD', 'STONE CABIN': 'STONE CABIN FIELD',
+    #                          'SWEETWATER CYN': 'SWEETWATER CANYON FIELD', 'TIN CUP MESA': 'TIN CUP MESA FIELD', 'TOWER': 'TOWER FIELD', 'TURNER BLUFF': 'TURNER BLUFF FIELD', 'VIRGIN': 'VIRGIN FIELD', 'WHITE RIVER': 'WHITE RIVER FIELD', 'WINTER CAMP': 'WINTER CAMP FIELD', 'ALGER PASS': 'ALGER PASS FIELD', 'ALKALI POINT': 'ALKALI POINT FIELD', 'ANIDO CREEK': 'ANIDO CREEK FIELD', 'ASPHALT WASH': 'ASPHALT WASH FIELD', 'ATCHEE RIDGE': 'ATCHEE RIDGE FIELD', 'BANNOCK': 'BANNOCK FIELD',
+    #                          'BIG SPRING': 'BIG SPRING FIELD', 'BITTER CREEK': 'BITTER CREEK FIELD', 'BLACK BULL': 'BLACK BULL FIELD', 'BLACK HORSE CYN': 'BLACK HORSE CANYON FIELD', 'BOOK CLIFFS': 'BOOK CLIFFS FIELD', 'BRENNAN BOTTOM': 'BRENNAN BOTTOM FIELD', 'BROKEN HILLS': 'BROKEN HILLS FIELD', 'BRONCO': 'BRONCO FIELD', 'BRYSON CANYON': 'BRYSON CANYON FIELD', 'CAJON LAKE': 'CAJON LAKE FIELD', 'CANE CREEK': 'KANE CREEK FIELD', 'CASA MESA': 'CASA MESA FIELD',
+    #                          'CHALK CREEK GAS STORAGE': 'CHALK CREEK GAS STORAGE', 'COTTONWOOD WASH': 'COTTONWOOD WASH FIELD', 'CROOKED CANYON': 'CROOKED CANYON FIELD', 'DUCHESNE': 'DUCHESNE FIELD', 'FLAT CANYON': 'FLAT CANYON FIELD', 'GATE CANYON': 'GATE CANYON FIELD', 'GORDON CREEK': 'GORDON CREEK FIELD', 'GOTHIC MESA': 'GOTHIC MESA FIELD', 'GYPSUM HILLS': 'GYPSUM HILLS FIELD', 'HELL ROARING': 'HELL ROARING FIELD', 'HERON': 'HERON FIELD', 'HILL CREEK': 'HILL CREEK FIELD',
+    #                          'HORSE POINT': 'HORSE POINT FIELD', "JOE'S VALLEY": "JOE'S VALLEY FIELD", 'KENNEDY WASH': 'KENNEDY WASH FIELD', 'LIGHTNING DRAW SE': 'LIGHTNING DRAW FIELD', 'LITTLE NANCY': 'LITTLE NANCY FIELD', 'LITTLE VALLEY': 'LITTLE VALLEY FIELD', 'LONE SPRING': 'LONE SPRING FIELD', 'LONG CANYON': 'LONG CANYON FIELD', 'MIDDLE BENCH': 'MIDDLE BENCH FIELD', 'MOON RIDGE': 'MOON RIDGE FIELD', 'NAVAL RESERVE': 'NAVAL RESERVE FIELD', 'PETERSON SPRING': 'PETERSON SPRINGS FIELD',
+    #                          'PLEASANT VALLEY': 'PLEASANT VALLEY FIELD', 'RED WASH': 'RED WASH FIELD', 'SALT WASH': 'SALT WASH FIELD', 'SCOFIELD': 'UCOLO FIELD', 'SHAFER CANYON': 'SHAFER CANYON FIELD', 'SOUTH CANYON': 'SOUTH CANYON FIELD', 'SOUTH MYTON BENCH': 'NORTH MYTON BENCH', 'SQUAW POINT': 'SQUAW POINT FIELD', 'WALKER HOLLOW': 'WALKER HOLLOW FIELD', 'WESTWATER': 'WESTWATER FIELD', 'WHITEBELLY WASH': 'WHITEBELLY WASH FIELD', 'YELLOW ROCK': 'YELLOW ROCK FIELD',
+    #                          'AGENCY DRAW WEST': 'AGENCY DRAW WEST FIELD', 'ANSCHUTZ RANCH': 'ANSCHUTZ RANCH FIELD', 'ANSCHUTZ RANCH EAST': 'ANSCHUTZ RANCH EAST FIELD', 'ASHLEY VALLEY': 'ASHLEY VALLEY FIELD', 'BIG INDIAN NORTH': 'BIG INDIAN (NORTH) FIELD', 'BLAZE CANYON': 'BLAZE CANYON FIELD', 'CAJON MESA': 'CAJON MESA FIELD', 'CASTLEGATE': 'CASTLEGATE FIELD', 'CAVE CANYON': 'CAVE CANYON FIELD', 'CAVE CREEK': 'CAVE CREEK FIELD', 'CEDAR RIM': 'CEDAR RIM FIELD',
+    #                          'COALVILLE GAS STORAGE': 'COALVILLE GAS STORAGE', 'COYOTE BASIN': 'COYOTE BASIN FIELD', 'DIAMOND RIDGE': 'DIAMOND RIDGE FIELD', 'DRUNKARDS WASH': 'DRUNKARDS WASH FIELD', 'EIGHT MILE FLAT': 'EIGHT MILE FLAT FIELD', 'FERRON': 'FERRON FIELD', 'FIRTH': 'FIRTH FIELD', 'FLAT ROCK': 'FLAT ROCK FIELD', 'GREATER ANETH': 'GREATER ANETH FIELD', 'GREENTOWN': 'GREENTOWN FIELD', 'INDIAN CANYON': 'INDIAN CANYON FIELD', 'ISMAY': 'ISMAY FIELD',
+    #                          'LEFT HAND CYN': 'LEFT HAND CANYON FIELD', 'LELAND BENCH': 'LELAND BENCH FIELD', 'MATHEWS': 'MATHEWS FIELD', 'MEXICAN HAT': 'MEXICAN HAT FIELD', 'MIDDLE CANYON (DKTA)': 'MIDDLE CANYON FIELD', 'MILLER CREEK': 'MILLER CREEK FIELD', 'MOFFAT CANAL': 'MOFFAT CANAL FIELD', 'NORTH PINEVIEW': 'NORTH PINEVIEW FIELD', 'OIL SPRINGS': 'OIL SPRINGS FIELD', 'PATTERSON CANYON': 'PATTERSON CANYON FIELD', 'PINE SPRINGS': 'PINE SPRINGS FIELD', 'PINEVIEW': 'PINEVIEW FIELD',
+    #                          'PROVIDENCE': 'PROVIDENCE FIELD', 'RECAPTURE POCKET': 'RECAPTURE POCKET FIELD', 'RIVER BANK': 'RIVER BANK FIELD', 'ROAD CANYON': 'ROAD CANYON FIELD', 'ROZEL POINT': 'ROZEL POINT FIELD', 'SEEP RIDGE B (DKTA)': 'SEEP RIDGE B FIELD', 'SQUAW CANYON': 'SQUAW CANYON FIELD', 'STARR FLAT': 'STARR FLAT FIELD', 'STATELINE': 'STATE LINE FIELD', 'TEN MILE': 'TEN MILE FIELD', 'THREE RIVERS': 'THREE RIVERS FIELD', 'UPPER VALLEY': 'UPPER VALLEY FIELD',
+    #                          'WEST WILLOW CREEK': 'WEST WILLOW CREEK FIELD', 'WHISKEY CREEK': 'WHISKEY CREEK FIELD', 'WILSON CANYON': 'WILSON CANYON FIELD', 'WOLF POINT': 'WOLF POINT FIELD', 'TABYAGO': 'TABYAGO CANYON FIELD', 'KIVA': 'KIVA FIELD', 'AKAH': 'AKAH FIELD', 'BUG': 'BUG FIELD', 'LOVE': 'LOVE FIELD', '12 MILE WASH': 'TWELVE MILE WASH FIELD'}
+    #
+    #     month_dict = {'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5,
+    #                   'June': 6, 'July': 7, 'August': 8, 'September': 9, 'October': 10,
+    #                   'November': 11, 'December': 12}
+    #     # Load the data
+    #     self.dx_data = read_sql('select * from WellInfo', self.conn_db)
+    #     self.dx_data = self.dx_data.rename(columns={'entityname': 'Operator'})
+    #     # Drop any plugged data and duplicates
+    #     self.dx_data = self.dx_data[self.dx_data['WorkType'] != 'PLUG']
+    #     self.dx_data.drop_duplicates(keep='first', inplace=True)
+    #     # Create a new column, display name, for displaying in the combo boxes
+    #     self.dx_data['DisplayName'] = self.dx_data['WellID'].astype(str) + ' - ' + self.dx_data['WellName'].astype(str)
+    #
+    #     # Convert to a datetime type and adjust accordingly for well age (in months)
+    #     self.dx_data['DrySpud'] = to_datetime(self.dx_data['DrySpud'])
+    #     self.dx_data['WellAge'] = (datetime.now().year - self.dx_data['DrySpud'].dt.year) * 12 + datetime.now().month - self.dx_data['DrySpud'].dt.month
+    #     self.dx_data['DrySpud'] = self.dx_data['DrySpud'].dt.strftime('%Y-%m-%d')
+    #
+    #     # Convert to a datetime type and adjust accordingly for well age (in months)
+    #
+    #     # Conditional for non-existant well age and approved permits (IE, stuff that is planned)
+    #     condition = pd.isna(self.dx_data['WellAge']) & (self.dx_data['CurrentWellStatus'] == 'Approved Permit')
+    #
+    #     # anywhere the condition is met, adjust the well age to 0
+    #     self.dx_data.loc[condition, 'WellAge'] = 0
+    #     # Add it to an actual month value (since I can't find any way to sort by months because I'm ignorant)
+    #     self.dx_data['month_order'] = self.dx_data['Docket_Month'].map(month_dict)
+    #
+    #     # Sort by the month order
+    #     df_sorted = self.dx_data.sort_values(by=['Board_Year', 'month_order'])
+    #
+    #     # Drop that column
+    #     self.dx_data = df_sorted.drop('month_order', axis=1)
+    #
+    #     # Add in the fieldname, adjusted for what the official AGRC data lists the field names at
+    #     self.dx_data['FieldName'] = self.dx_data['FieldName'].map(translated_fields)
+    #     dx_data_unique = self.dx_data.drop_duplicates(subset=['WellID'])
+    #     return dx_data_unique
+
+    def loadWellData(self, dx_data_unique: DataFrame) -> None:
+        """Loads and processes well directional survey data, merging it with unique well information
+        and performing necessary coordinate and elevation calculations.
+
+        This method queries the DX table, merges it with well-specific data, and performs various
+        data transformations including elevation calculations and coordinate conversions.
+
+        Args:
+            dx_data_unique (DataFrame): DataFrame containing unique well records with columns:
+                - WellID: Well identifier
+                - Elevation: Surface elevation of well
+                - FieldName: Name of the oil/gas field
+                - Mineral Lease: Associated mineral lease information
+                - ConcCode: Concentration code
+
+        Notes:
+            - Updates several class attributes including self.dx_df and self.df_shl
+            - Performs coordinate conversions from meters to state plane (feet)
+            - Adjusts vertical well coordinates slightly to enable linestring creation
+            - All depth and elevation calculations are in consistent units (feet)
+
+        Side Effects:
+            - Modifies self.dx_df: Main directional survey DataFrame
+            - Creates self.df_shl: Surface hole location DataFrame
+        """
+        # Load directional survey data and remove duplicates
         self.dx_df = read_sql('select * from DX', self.conn_db)
         self.dx_df.drop_duplicates(keep='first', inplace=True)
-        """Merge in the data for better analysis"""
-        self.dx_df = pd.merge(self.dx_df, dx_data_unique[['WellID', 'Elevation', 'FieldName', 'Mineral Lease', 'ConcCode']],
-                              how='left', left_on='APINumber', right_on='WellID')
+
+        # Merge directional survey data with well-specific information
+        self.dx_df = pd.merge(
+            self.dx_df,
+            dx_data_unique[['WellID', 'Elevation', 'FieldName', 'Mineral Lease', 'ConcCode']],
+            how='left',
+            left_on='APINumber',
+            right_on='WellID'
+        )
+
+        # Convert coordinate columns to float type
         self.dx_df['X'] = self.dx_df['X'].astype(float)
         self.dx_df['Y'] = self.dx_df['Y'].astype(float)
-        """What we're doing here is converting to a true elevation compared to the elevation of the well. Namely, if the well is X ft deep, and the wellHead is at Y ft, what are they relative to each other?"""
-        self.dx_df['TrueElevation'] = self.dx_df['Elevation'] - to_numeric(self.dx_df['TrueVerticalDepth'], errors='coerce')
+
+        # Calculate true elevation relative to well head elevation
+        self.dx_df['TrueElevation'] = self.dx_df['Elevation'] - to_numeric(self.dx_df['TrueVerticalDepth'],
+                                                                           errors='coerce')
         self.dx_df['MeasuredDepth'] = to_numeric(self.dx_df['MeasuredDepth'], errors='coerce')
+
+        # Standardize citing type to lowercase
         self.dx_df['CitingType'] = self.dx_df['CitingType'].str.lower()
-        # This is done so that we can have linestrings for vertical wells (which effectively have one point in 2d)
+
+        # Adjust Y coordinates for vertical wells to create valid linestrings
+        # Adds small incremental offset (0.001) to Y coordinate for each point
         self.dx_df.loc[self.dx_df['CitingType'] == 'vertical', 'Y'] += self.dx_df.groupby(['X', 'Y']).cumcount() * 1e-3
-        # State plane conversion. I don't think this ever gets used.
-        self.dx_df['SPX'] = self.dx_df['X'].astype(float) / 0.3048
-        self.dx_df['SPY'] = self.dx_df['Y'].astype(float) / 0.3048
+
+        # Convert coordinates to state plane (meters to feet)
+        self.dx_df['SPX'] = self.dx_df['X'].astype(float) / 0.3048  # Convert meters to feet
+        self.dx_df['SPY'] = self.dx_df['Y'].astype(float) / 0.3048  # Convert meters to feet
+
+        # Sort data by well ID and measured depth
         self.dx_df = self.dx_df.sort_values(by=['WellID', 'MeasuredDepth'])
-        # get shl locations based on the first row of each wellid
+
+        # Create surface hole location DataFrame from first point of each well
         self.df_shl = self.dx_df.groupby('WellID').first().reset_index()
+    #
+    # def loadWellData(self, dx_data_unique):
+    #     self.dx_df = read_sql('select * from DX', self.conn_db)
+    #     self.dx_df.drop_duplicates(keep='first', inplace=True)
+    #     """Merge in the data for better analysis"""
+    #     self.dx_df = pd.merge(self.dx_df, dx_data_unique[['WellID', 'Elevation', 'FieldName', 'Mineral Lease', 'ConcCode']],
+    #                           how='left', left_on='APINumber', right_on='WellID')
+    #     self.dx_df['X'] = self.dx_df['X'].astype(float)
+    #     self.dx_df['Y'] = self.dx_df['Y'].astype(float)
+    #     """What we're doing here is converting to a true elevation compared to the elevation of the well. Namely, if the well is X ft deep, and the wellHead is at Y ft, what are they relative to each other?"""
+    #     self.dx_df['TrueElevation'] = self.dx_df['Elevation'] - to_numeric(self.dx_df['TrueVerticalDepth'], errors='coerce')
+    #     self.dx_df['MeasuredDepth'] = to_numeric(self.dx_df['MeasuredDepth'], errors='coerce')
+    #     self.dx_df['CitingType'] = self.dx_df['CitingType'].str.lower()
+    #     # This is done so that we can have linestrings for vertical wells (which effectively have one point in 2d)
+    #     self.dx_df.loc[self.dx_df['CitingType'] == 'vertical', 'Y'] += self.dx_df.groupby(['X', 'Y']).cumcount() * 1e-3
+    #     # State plane conversion. I don't think this ever gets used.
+    #     self.dx_df['SPX'] = self.dx_df['X'].astype(float) / 0.3048
+    #     self.dx_df['SPY'] = self.dx_df['Y'].astype(float) / 0.3048
+    #     self.dx_df = self.dx_df.sort_values(by=['WellID', 'MeasuredDepth'])
+    #     # get shl locations based on the first row of each wellid
+    #     self.df_shl = self.dx_df.groupby('WellID').first().reset_index()
+    def reTranslateData(self, i):
+        conc_code_merged = i[:6]
+        conc_code_merged.iloc[2] = self.translateNumberToDirection('township', str(conc_code_merged.iloc[2])).upper()
+        conc_code_merged.iloc[4] = self.translateNumberToDirection('rng', str(conc_code_merged.iloc[4])).upper()
+        conc_code_merged.iloc[5] = self.translateNumberToDirection('baseline', str(conc_code_merged.iloc[5])).upper()
+        conc_code_merged.iloc[0] = str(int(float(conc_code_merged.iloc[0]))).zfill(2)
+        conc_code_merged.iloc[1] = str(int(float(conc_code_merged.iloc[1]))).zfill(2)
+        conc_code_merged.iloc[3] = str(int(float(conc_code_merged.iloc[3]))).zfill(2)
+        conc_code = "".join([str(q) for q in conc_code_merged])
+        return conc_code
 
-
+    def translateNumberToDirection(self, variable, val):
+        translations = {
+            'rng': {'2': 'W', '1': 'E'},
+            'township': {'2': 'S', '1': 'N'},
+            'baseline': {'2': 'U', '1': 'S'},
+            'alignment': {'1': 'SE', '2': 'NE', '3': 'SW', '4': 'NW'}
+        }
+        return translations.get(variable, {}).get(val, val)
 class ZoomPan:
-    def __init__(self):
-        self.press = None
-        self.cur_xlim = None
-        self.cur_ylim = None
-        self.x0 = None
-        self.y0 = None
-        self.x1 = None
-        self.y1 = None
-        self.xpress = None
-        self.ypress = None
-        self.text_objects = []  # Store text annotations
+    """A class to handle zoom and pan functionality for matplotlib plots with dynamic text scaling.
 
-    def zoom_factory(self, ax, base_scale):
-        def zoom(event):
+    This class provides interactive zoom and pan capabilities for matplotlib figures, including
+    automatic text size adjustment based on the zoom level.
+    """
+
+    def __init__(self):
+        """Initialize the ZoomPan instance with default values for tracking interaction states."""
+        self.press: Optional[Tuple[float, float, float, float]] = None  # Stores press event data
+        self.cur_xlim: Optional[Tuple[float, float]] = None  # Current x-axis limits
+        self.cur_ylim: Optional[Tuple[float, float]] = None  # Current y-axis limits
+        self.x0: Optional[float] = None  # Initial x coordinate
+        self.y0: Optional[float] = None  # Initial y coordinate
+        self.x1: Optional[float] = None  # Final x coordinate
+        self.y1: Optional[float] = None  # Final y coordinate
+        self.xpress: Optional[float] = None  # x coordinate at press
+        self.ypress: Optional[float] = None  # y coordinate at press
+        self.text_objects: List[Text] = []  # List to store text annotations
+
+    def zoom_factory(self, ax: Axes, base_scale: float) -> Callable:
+        """Creates and returns a zoom handler function for the specified axes.
+
+        Args:
+            ax: Matplotlib axes object to enable zooming on
+            base_scale: Scale factor for zoom operations (>1 for zoom out, <1 for zoom in)
+
+        Returns:
+            Callable function that handles zoom events
+
+        Notes:
+            The zoom handler automatically adjusts text annotation sizes based on zoom level
+        """
+
+        def zoom(event: MouseEvent) -> None:
+            """Handle mouse scroll events for zooming."""
             cur_xlim = ax.get_xlim()
             cur_ylim = ax.get_ylim()
 
-            xdata = event.xdata  # get event x location
-            ydata = event.ydata  # get event y location
+            xdata = event.xdata
+            ydata = event.ydata
 
-            if event.button == 'down':
-                # deal with zoom in
-                scale_factor = 1 / base_scale
-            elif event.button == 'up':
-                # deal with zoom out
-                scale_factor = base_scale
-            else:
-                # deal with something that should never happen
-                scale_factor = 1
+            # Determine zoom direction and scale factor
+            scale_factor = 1 / base_scale if event.button == 'down' else base_scale
 
+            # Calculate new dimensions
             new_width = (cur_xlim[1] - cur_xlim[0]) * scale_factor
             new_height = (cur_ylim[1] - cur_ylim[0]) * scale_factor
 
+            # Calculate relative positions
             relx = (cur_xlim[1] - xdata) / (cur_xlim[1] - cur_xlim[0])
             rely = (cur_ylim[1] - ydata) / (cur_ylim[1] - cur_ylim[0])
 
+            # Set new limits
             ax.set_xlim([xdata - new_width * (1 - relx), xdata + new_width * (relx)])
             ax.set_ylim([ydata - new_height * (1 - rely), ydata + new_height * (rely)])
 
-            # Update the font size of text annotations based on the new zoom level
+            # Update text annotation sizes
             scale_factor = ax.get_xlim()[1] - ax.get_xlim()[0]
             for text in self.text_objects:
-                new_fontsize = 12 / scale_factor * 2500  # Adjust the 10 as needed for desired scale
+                new_fontsize = 12 / scale_factor * 2500
                 text.set_fontsize(new_fontsize)
             ax.figure.canvas.draw()
 
-        fig = ax.get_figure()  # get the figure of interest
+        fig = ax.get_figure()
         fig.canvas.mpl_connect('scroll_event', zoom)
         return zoom
 
-    def add_text(self, ax, x, y, text_str):
+    def add_text(self, ax: Axes, x: float, y: float, text_str: str) -> None:
+        """Add a text annotation to the plot with dynamic size scaling.
+
+        Args:
+            ax: Matplotlib axes object to add text to
+            x: X-coordinate for text placement
+            y: Y-coordinate for text placement
+            text_str: Text string to display
+        """
         scale_factor = ax.get_xlim()[1] - ax.get_xlim()[0]
-        text = ax.text(x, y, text_str, ha='center', va='center', fontsize=12 / scale_factor * 2500, transform=ax.transData)
+        text = ax.text(x, y, text_str, ha='center', va='center',
+                       fontsize=12 / scale_factor * 2500, transform=ax.transData)
         self.text_objects.append(text)
 
-    def pan_factory(self, ax):
-        def onPress(event):
+    def pan_factory(self, ax: Axes) -> Callable:
+        """Creates and returns a pan handler function for the specified axes.
+
+        Args:
+            ax: Matplotlib axes object to enable panning on
+
+        Returns:
+            Callable function that handles pan motion events
+        """
+
+        def onPress(event: MouseEvent) -> None:
+            """Handle mouse button press events."""
             if event.inaxes != ax: return
             self.cur_xlim = ax.get_xlim()
             self.cur_ylim = ax.get_ylim()
             self.press = self.x0, self.y0, event.xdata, event.ydata
             self.x0, self.y0, self.xpress, self.ypress = self.press
 
-        def onRelease(event):
+        def onRelease(event: MouseEvent) -> None:
+            """Handle mouse button release events."""
             self.press = None
             ax.figure.canvas.draw()
 
-        def onMotion(event):
+        def onMotion(event: MouseEvent) -> None:
+            """Handle mouse motion events for panning."""
             if self.press is None: return
             if event.inaxes != ax: return
             dx = event.xdata - self.xpress
@@ -6981,18 +8154,103 @@ class ZoomPan:
             self.cur_ylim -= dy
             ax.set_xlim(self.cur_xlim)
             ax.set_ylim(self.cur_ylim)
-
             ax.figure.canvas.draw()
 
-        fig = ax.get_figure()  # get the figure of interest
-
-        # attach the call back
+        fig = ax.get_figure()
         fig.canvas.mpl_connect('button_press_event', onPress)
         fig.canvas.mpl_connect('button_release_event', onRelease)
         fig.canvas.mpl_connect('motion_notify_event', onMotion)
-
-        # return the function
         return onMotion
+
+# class ZoomPan:
+#     def __init__(self):
+#         self.press = None
+#         self.cur_xlim = None
+#         self.cur_ylim = None
+#         self.x0 = None
+#         self.y0 = None
+#         self.x1 = None
+#         self.y1 = None
+#         self.xpress = None
+#         self.ypress = None
+#         self.text_objects = []  # Store text annotations
+#
+#     def zoom_factory(self, ax, base_scale):
+#         def zoom(event):
+#             cur_xlim = ax.get_xlim()
+#             cur_ylim = ax.get_ylim()
+#
+#             xdata = event.xdata  # get event x location
+#             ydata = event.ydata  # get event y location
+#
+#             if event.button == 'down':
+#                 # deal with zoom in
+#                 scale_factor = 1 / base_scale
+#             elif event.button == 'up':
+#                 # deal with zoom out
+#                 scale_factor = base_scale
+#             else:
+#                 # deal with something that should never happen
+#                 scale_factor = 1
+#
+#             new_width = (cur_xlim[1] - cur_xlim[0]) * scale_factor
+#             new_height = (cur_ylim[1] - cur_ylim[0]) * scale_factor
+#
+#             relx = (cur_xlim[1] - xdata) / (cur_xlim[1] - cur_xlim[0])
+#             rely = (cur_ylim[1] - ydata) / (cur_ylim[1] - cur_ylim[0])
+#
+#             ax.set_xlim([xdata - new_width * (1 - relx), xdata + new_width * (relx)])
+#             ax.set_ylim([ydata - new_height * (1 - rely), ydata + new_height * (rely)])
+#
+#             # Update the font size of text annotations based on the new zoom level
+#             scale_factor = ax.get_xlim()[1] - ax.get_xlim()[0]
+#             for text in self.text_objects:
+#                 new_fontsize = 12 / scale_factor * 2500  # Adjust the 10 as needed for desired scale
+#                 text.set_fontsize(new_fontsize)
+#             ax.figure.canvas.draw()
+#
+#         fig = ax.get_figure()  # get the figure of interest
+#         fig.canvas.mpl_connect('scroll_event', zoom)
+#         return zoom
+#
+#     def add_text(self, ax, x, y, text_str):
+#         scale_factor = ax.get_xlim()[1] - ax.get_xlim()[0]
+#         text = ax.text(x, y, text_str, ha='center', va='center', fontsize=12 / scale_factor * 2500, transform=ax.transData)
+#         self.text_objects.append(text)
+#
+#     def pan_factory(self, ax):
+#         def onPress(event):
+#             if event.inaxes != ax: return
+#             self.cur_xlim = ax.get_xlim()
+#             self.cur_ylim = ax.get_ylim()
+#             self.press = self.x0, self.y0, event.xdata, event.ydata
+#             self.x0, self.y0, self.xpress, self.ypress = self.press
+#
+#         def onRelease(event):
+#             self.press = None
+#             ax.figure.canvas.draw()
+#
+#         def onMotion(event):
+#             if self.press is None: return
+#             if event.inaxes != ax: return
+#             dx = event.xdata - self.xpress
+#             dy = event.ydata - self.ypress
+#             self.cur_xlim -= dx
+#             self.cur_ylim -= dy
+#             ax.set_xlim(self.cur_xlim)
+#             ax.set_ylim(self.cur_ylim)
+#
+#             ax.figure.canvas.draw()
+#
+#         fig = ax.get_figure()  # get the figure of interest
+#
+#         # attach the call back
+#         fig.canvas.mpl_connect('button_press_event', onPress)
+#         fig.canvas.mpl_connect('button_release_event', onRelease)
+#         fig.canvas.mpl_connect('motion_notify_event', onMotion)
+#
+#         # return the function
+#         return onMotion
 
 
 def except_hook(cls, exception, traceback):
