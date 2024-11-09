@@ -273,41 +273,18 @@ class BoldDelegate(QStyledItemDelegate):
             # Step 5: Apply the modified font to the option
             option.font = font
 
-# class MultiBoldRowDelegate(QStyledItemDelegate):
-#     def __init__(self, bold_rows, parent=None):
-#         super().__init__(parent)
-#         self.bold_rows = set(bold_rows)  # Convert to set for faster lookup
-#
-#     def initStyleOption(self, option, index):
-#         super().initStyleOption(option, index)
-#         if index.row() in self.bold_rows:
-#             option.font.setBold(True)
-#
-#
-# class BoldDelegate(QStyledItemDelegate):
-#     def __init__(self, bold_values, parent=None):
-#         super().__init__(parent)
-#         self.bold_values = bold_values
-#
-#     def initStyleOption(self, option, index):
-#         super().initStyleOption(option, index)
-#         if index.data() in self.bold_values:
-#             font = option.font
-#             font.setBold(True)
-#             option.font = font
-#
 
 class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
     checkbox_state_changed = PyQt5.QtCore.pyqtSignal(int, str, bool, PyQt5.QtGui.QColor)
     def __init__(self, flag=True):
         super().__init__()
+        set_option('display.max_columns', None)
+        options.mode.chained_assignment = None
         self.combo_box_data = None
         self.docket_ownership_data = None
         self.used_plat_codes = None
         self.df_adjacent_plats = None
         self.df_adjacent_fields = None
-        set_option('display.max_columns', None)
-        options.mode.chained_assignment = None
         self.field_labels = None
         self.field_centroids_lst = None
         self.df_shl = None
@@ -686,36 +663,10 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         self.ui.all_wells_qtableview.clicked.connect(self.on_row_clicked)
 
         self.ui.ownership_button_group.buttonClicked.connect(self.ownershipSelection)
-
         self.ui.ownership_checkbox.setEnabled(False)
         self.ui.section_ownership_radio_complex.setEnabled(False)
         self.ui.section_ownership_radio_simplified.setEnabled(False)
         self.ui.well_type_or_status_button_group.buttonClicked.connect(self.manipulateTheDfDocketDataDependingOnCheckboxes)
-
-    # def setupTables(self):
-    #     """
-    #     Initialize the tables in the user interface with empty QTableWidgetItems.
-    #
-    #     This function sets up three well data tables and one board data table
-    #     by populating them with empty QTableWidgetItems. This prepares the tables
-    #     for later data insertion.
-    #     """
-    #     # Set up the three well data tables
-    #     for table in [self.ui.well_data_table_1, self.ui.well_data_table_2, self.ui.well_data_table_3]:
-    #         # For each table, populate the first row with 12 empty items
-    #         for column in range(12):
-    #             # Create a new empty QTableWidgetItem
-    #             empty_item = PyQt5.QtWidgets.QTableWidgetItem()
-    #             # Set the empty item in the first row (row 0) and current column
-    #             table.setItem(0, column, empty_item)
-    #
-    #     # Set up the board data table
-    #     # Populate the first column of the board data table with 3 empty items
-    #     for row in range(3):
-    #         # Create a new empty QTableWidgetItem
-    #         empty_item = PyQt5.QtWidgets.QTableWidgetItem()
-    #         # Set the empty item in the current row and first column (column 0)
-    #         self.ui.board_data_table.setItem(row, 0, empty_item)
 
     def setupTables(self) -> None:
         """Initializes UI tables with empty QTableWidgetItems for data display.
@@ -746,116 +697,62 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         Raises:
             AttributeError: If any of the required UI table widgets are not properly initialized.
         """
-        # Initialize the three well data tables with empty items
+        # Initialize list of well data tables for batch processing
         well_tables: List[QTableWidget] = [
             self.ui.well_data_table_1,
             self.ui.well_data_table_2,
             self.ui.well_data_table_3
         ]
 
-        # Populate well data tables
-        for table in well_tables:
-            for column in range(12):
-                empty_item = QTableWidgetItem()
-                table.setItem(0, column, empty_item)
+        # Initialize all well data tables (12 columns x 1 row each)
+        for table in well_tables:  # type: QTableWidget
+            for column in range(12):  # Create empty cells across all columns
+                empty_item = QTableWidgetItem()  # Create empty cell
+                table.setItem(0, column, empty_item)  # Set cell in first row
 
-        # Populate board data table's first column
-        for row in range(3):
-            empty_item = QTableWidgetItem()
-            self.ui.board_data_table.setItem(row, 0, empty_item)
+        # Initialize board data table (1 column x 3 rows)
+        for row in range(3):  # Create empty cells down first column
+            empty_item = QTableWidgetItem()  # Create empty cell
+            self.ui.board_data_table.setItem(row, 0, empty_item)  # Set cell in first column
 
-    def zoom(self, event: MouseEvent, ax: plt.Axes, centroid: Tuple[float, float, float],fig: Figure,) -> None:
-        """
-        Performs zooming operations on a 3D plot using mouse scroll events with a fixed centroid as anchor point.
+    def zoom(self, event: MouseEvent, ax: plt.Axes, centroid: Tuple[float, float, float], fig: Figure) -> None:
+        """Performs zooming operations on a 3D plot using mouse scroll events.
 
-        The zoom operation maintains the plot's center at the centroid while scaling the view
-        based on mouse scroll direction. Scrolling up zooms in, while scrolling down zooms out.
+        Maintains the plot's center at the specified centroid while scaling the view
+        based on mouse scroll direction. Scrolling up zooms in (1.1x), while scrolling
+        down zooms out (0.9x).
 
         Args:
-            event (MouseEvent): The matplotlib scroll event containing scroll direction
-                information. The event.button will be either 'up' or 'down'.
-            ax (plt.Axes): The 3D matplotlib axes object to be zoomed. Must be a 3D axes
-                created with projection='3d'.
-            centroid (Tuple[float, float, float]): The (x, y, z) coordinates representing
-                the center point around which to zoom. This point remains fixed during zooming.
-            fig (Figure): The matplotlib figure object containing the axes. Used for
-                refreshing the display after zoom.
-
-        Notes:
-            - The zoom factor is fixed at 1.1 for zoom in and 0.9 for zoom out
-            - The zoom is applied equally to all three axes to maintain aspect ratio
-            - The centroid remains stationary during zoom operations
-            - The method directly modifies the axes limits without returning any values
-
-        Example:
-            ```python
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')
-            centroid = (0.0, 0.0, 0.0)
-
-            def on_scroll(event):
-                zoom(self, event, ax, centroid, fig)
-
-            fig.canvas.mpl_connect('scroll_event', on_scroll)
-            ```
+            event: The matplotlib scroll event containing scroll direction.
+            ax: The 3D matplotlib axes object to be zoomed (projection='3d').
+            centroid: The (x, y, z) coordinates of the fixed center point.
+            fig: The matplotlib figure containing the axes.
 
         Warning:
-            This method assumes the input axes is a 3D axes object. Using with 2D axes
-            will result in AttributeError when accessing 3D-specific methods.
+            Requires 3D axes object. Using with 2D axes will raise AttributeError.
         """
-        # Calculate the current zoom level by getting the range of the x-axis
+        # Get current zoom level from x-axis range
         current_zoom: float = ax.get_xlim3d()[1] - ax.get_xlim3d()[0]
 
-        # Determine zoom direction: zoom in (factor > 1) if scrolling up, else zoom out
+        # Set zoom factor based on scroll direction
         zoom_factor: float = 1.1 if event.button == 'up' else 0.9
 
-        # Calculate the amount to zoom based on current zoom and zoom factor
+        # Calculate new zoom amount
         zoom_amount: float = (current_zoom * zoom_factor) / 2
 
-        # Calculate new axis limits centered on the centroid
+        # Update axis limits maintaining centroid as center
         new_xlim: list[float] = [centroid[0] - zoom_amount, centroid[0] + zoom_amount]
         new_ylim: list[float] = [centroid[1] - zoom_amount, centroid[1] + zoom_amount]
         new_zlim: list[float] = [centroid[2] - zoom_amount, centroid[2] + zoom_amount]
 
-        # Apply the new limits to all three axes
+        # Apply new limits to all axes
         ax.set_xlim3d(new_xlim)
         ax.set_ylim3d(new_ylim)
         ax.set_zlim3d(new_zlim)
 
-        # Redraw the plot to reflect the changes
+        # Refresh display
         fig.canvas.draw_idle()
 
-    # def zoom(self, event, ax, centroid, fig):
-    #     """
-    #     Perform zooming on a 3D plot based on a scroll event, using the centroid as an anchor.
-    #
-    #     Args:
-    #     event (Event): The scroll event triggering the zoom.
-    #     ax (Axes3D): The 3D axes object to be zoomed.
-    #     centroid (tuple): The (x, y, z) coordinates of the centroid of the plot.
-    #     fig (Figure): The figure containing the plot.
-    #     """
-    #     # Calculate the current zoom level by getting the range of the x-axis
-    #     current_zoom = ax.get_xlim3d()[1] - ax.get_xlim3d()[0]
-    #
-    #     # Determine zoom direction: zoom in (factor > 1) if scrolling up, else zoom out
-    #     zoom_factor = 1.1 if event.button == 'up' else 0.9
-    #
-    #     # Calculate the amount to zoom based on current zoom and zoom factor
-    #     zoom_amount = (current_zoom * zoom_factor) / 2
-    #
-    #     # Calculate new axis limits centered on the centroid
-    #     new_xlim = [centroid[0] - zoom_amount, centroid[0] + zoom_amount]
-    #     new_ylim = [centroid[1] - zoom_amount, centroid[1] + zoom_amount]
-    #     new_zlim = [centroid[2] - zoom_amount, centroid[2] + zoom_amount]
-    #
-    #     # Apply the new limits to all three axes
-    #     ax.set_xlim3d(new_xlim)
-    #     ax.set_ylim3d(new_ylim)
-    #     ax.set_zlim3d(new_zlim)
-    #
-    #     # Redraw the plot to reflect the changes
-    #     fig.canvas.draw_idle()
     def comboBoxSetupYear(self) -> None:
         """
         Sets up and populates the year combo box with available years.
@@ -903,29 +800,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         # Set the created model as the model for the year combo box
         self.ui.year_lst_combobox.setModel(model)
 
-
-    # def comboBoxSetupYear(self):
-    #     """
-    #     Set up the year combo box with available years.
-    #
-    #     This function populates the year combo box with the years stored in self.used_years.
-    #     It creates a new model for the combo box and adds each year as an item.
-    #     """
-    #     # Clear any existing items from the year combo box
-    #     self.ui.year_lst_combobox.clear()
-    #
-    #     # Create a new QStandardItemModel to hold the year items
-    #     model = QStandardItemModel()
-    #
-    #     # Iterate through each year in the self.used_years list
-    #     for year in self.used_years:
-    #         # Create a new QStandardItem for the current year
-    #         item = QStandardItem(year)
-    #         # Add the year item to the model
-    #         model.appendRow(item)
-    #
-    #     # Set the created model as the model for the year combo box
-    #     self.ui.year_lst_combobox.setModel(model)
     def comboBoxSetupMonthWhenYearChanges(self) -> None:
         """
         Updates the month combo box when the selected year changes in the year combo box.
@@ -985,45 +859,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         # Update month combo box with new model
         self.ui.month_lst_combobox.setModel(model)
 
-
-
-    # def comboBoxSetupMonthWhenYearChanges(self):
-    #     """
-    #     Update the month combo box when the selected year changes.
-    #     """
-    #     # Clear the wells list combo box
-    #     self.ui.well_lst_combobox.clear()
-    #
-    #     # Clear the board matters list combo box
-    #     self.ui.board_matter_lst_combobox.clear()
-    #
-    #     # Clear the month list combo box
-    #     self.ui.month_lst_combobox.clear()
-    #
-    #     # Get the currently selected year from the year combo box
-    #     selected_year = self.ui.year_lst_combobox.currentText()
-    #
-    #     # Filter dx_data for the selected year and extract unique Docket_Month values
-    #     self.used_months = self.dx_data[self.dx_data['Board_Year'] == selected_year]['Docket_Month'].unique()
-    #
-    #     # Create a new dataframe (df_year) containing only data for the selected year
-    #     self.df_year = self.dx_data[self.dx_data['Board_Year'] == selected_year]
-    #
-    #     # Create a new QStandardItemModel to hold the month items
-    #     model = QStandardItemModel()
-    #
-    #     # Iterate through each month in the used_months list
-    #     for month in self.used_months:
-    #         # Create a new QStandardItem for the current month
-    #         item = QStandardItem(month)
-    #         # Add the month item to the model
-    #         model.appendRow(item)
-    #
-    #     # Set the created model as the model for the month combo box
-    #     self.ui.month_lst_combobox.setModel(model)
-
-    """Run this to setup the board matters tab when the month tab is changed. Ran when month_lst_combobox is used"""
-
     def comboBoxSetupBoardWhenMonthChanges(self) -> None:
         """
         Updates the board matters combo box when a new month is selected. This method manages
@@ -1068,10 +903,8 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         selected_month: str = self.ui.month_lst_combobox.currentText()
 
         # Filter data for selected year and month
-        df_month: pd.DataFrame = self.dx_data[
-            (self.dx_data['Board_Year'] == selected_year) &
-            (self.dx_data['Docket_Month'] == selected_month)
-            ]
+        df_month: pd.DataFrame = self.dx_data[(self.dx_data['Board_Year'] == selected_year) &
+            (self.dx_data['Docket_Month'] == selected_month)]
 
         # Update class member with filtered monthly data
         self.df_month = self.df_year[self.df_year['Docket_Month'] == selected_month]
@@ -1087,243 +920,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         # Update board matters combo box with new model
         self.ui.board_matter_lst_combobox.setModel(model)
-
-
-    # def comboBoxSetupBoardWhenMonthChanges(self):
-    #     """
-    #     Update the board matters combo box when the selected month changes.
-    #     """
-    #     # Clear the wells list combo box
-    #     self.ui.well_lst_combobox.clear()
-    #
-    #     # Clear the board matters list combo box
-    #     self.ui.board_matter_lst_combobox.clear()
-    #
-    #     # Clear 2D and 3D visualization data
-    #     self.clearDataFrom2dAnd3d()
-    #
-    #     # Get the currently selected year and month from their respective combo boxes
-    #     selected_year = self.ui.year_lst_combobox.currentText()
-    #     selected_month = self.ui.month_lst_combobox.currentText()
-    #
-    #     # Filter dx_data for the selected year and month
-    #     df_month = self.dx_data[
-    #         (self.dx_data['Board_Year'] == selected_year) &
-    #         (self.dx_data['Docket_Month'] == selected_month)
-    #         ]
-    #
-    #     # Update df_month to contain only data for the selected month from df_year
-    #     self.df_month = self.df_year[self.df_year['Docket_Month'] == selected_month]
-    #
-    #     # Extract unique Board_Docket values for the filtered data
-    #     board_matters = df_month['Board_Docket'].unique()
-    #
-    #     # Create a new QStandardItemModel to hold the board matter items
-    #     model = QStandardItemModel()
-    #
-    #     # Iterate through each board matter in the board_matters list
-    #     for board_matter in board_matters:
-    #         # Create a new QStandardItem for the current board matter
-    #         item = QStandardItem(board_matter)
-    #         # Add the board matter item to the model
-    #         model.appendRow(item)
-    #
-    #     # Set the created model as the model for the board matters combo box
-    #     self.ui.board_matter_lst_combobox.setModel(model)
-
-
-    """Run this to setup the list of wells tab when the board matter tab is changed. It is run when the combobox board_matter_lst_combobox is used"""
-
-    # def comboBoxSetupWellsWhenDocketChanges2(self):
-    #     """
-    #     Updates the well list and related data when a new board docket is selected.
-    #     """
-    #     # Clear all previous 2D and 3D data visualizations
-    #     self.clearDataFrom2dAnd3d()
-    #
-    #     # Filter the main data (dx_data) for the selected board docket
-    #     self.df_docket = self.dx_data[
-    #         (self.dx_data['Board_Year'] == self.ui.year_lst_combobox.currentText()) &
-    #         (self.dx_data['Docket_Month'] == self.ui.month_lst_combobox.currentText()) &
-    #         (self.dx_data['Board_Docket'] == self.ui.board_matter_lst_combobox.currentText())
-    #         ]
-    #
-    #     # Get unique operators and update the operators model
-    #     operators = sorted(self.df_docket['Operator'].unique())
-    #     self.operators_model.clear()
-    #     for row in operators:
-    #         self.operators_model.appendRow(QStandardItem(row))
-    #
-    #     # Get unique well IDs and display names
-    #     apis = self.df_docket['WellID'].unique()
-    #     unique_count = sorted(self.df_docket['DisplayName'].unique())
-    #
-    #     # Filter directional survey data (dx_df) for wells in the current docket
-    #     test_df = (self.dx_df[self.dx_df['APINumber'].isin(apis)]
-    #                .drop_duplicates(keep='first')
-    #                .sort_values(by=['APINumber', 'MeasuredDepth']))
-    #
-    #     # Update df_docket to include only wells with directional survey data
-    #     unique_apis_with_data = test_df['APINumber'].unique()
-    #     self.df_docket = self.df_docket[self.df_docket['WellID'].isin(unique_apis_with_data)]
-    #
-    #     # Identify main wells (MainWell == 1) and create a final sorted list of wells
-    #     master_data = self.df_docket[self.df_docket['MainWell'] == 1]
-    #     masters_apds = sorted(master_data['DisplayName'].unique())
-    #     sorted_list = sorted([x for x in unique_count if x not in masters_apds])
-    #     final_list = masters_apds + sorted_list
-    #
-    #     # Update the "All Wells" table with the final list of wells
-    #     self.fillInAllWellsTable(final_list)
-    #
-    #     # Update the well list combo box
-    #     self.ui.well_lst_combobox.clear()
-    #     model = QStandardItemModel()
-    #     for item_text in final_list:
-    #         item = QStandardItem(item_text)
-    #         model.appendRow(item)
-    #     self.ui.well_lst_combobox.setModel(model)
-    #
-    #     # Make main wells bold in the combo box
-    #     delegate = BoldDelegate(masters_apds)
-    #     self.ui.well_lst_combobox.setItemDelegate(delegate)
-    #
-    #     # Update 2D data (relative elevation, targeted data, etc.)
-    #     self.update2dWhenDocketChanges()
-    #
-    #     # Create a new dataframe with well parameters for the current docket
-    #     self.df_docket_data = self.returnWellsWithParameters()
-    #
-    #     # Set the axes limits for the plots based on the current data
-    #     self.setAxesLimits()
-    #
-    #     # Prepare the data for filtering based on well age parameters
-    #     self.setupDataForBoardDrillingInformation()
-    #
-    #     # Update 3D view if data is available
-    #     if self.drilled_segments_3d:
-    #         self.centroid, std_vals = self.calculate_centroid_np(self.drilled_segments_3d)
-    #         new_xlim = [self.centroid[0] - 10000, self.centroid[0] + 10000]
-    #         new_ylim = [self.centroid[1] - 10000, self.centroid[1] + 10000]
-    #         new_zlim = [self.centroid[2] - 10000, self.centroid[2] + 10000]
-    #         self.ax3d.set_xlim3d(new_xlim)
-    #         self.ax3d.set_ylim3d(new_ylim)
-    #         self.ax3d.set_zlim3d(new_zlim)
-    #
-    #     # Generate section data for the 2D model
-    #     self.used_sections, self.all_wells_plat_labels = self.draw2dModelSections()
-    #
-    #     # Color in the oil and gas fields on the plot
-    #     self.colorInFields()
-    #
-    #     # Update the checkboxes for well types and statuses
-    #     self.update_checkboxes()
-    #
-    #     # Calculate centroids for each section (used for labeling)
-    #     self.centroids_lst = []
-    #     for i, val in enumerate(self.used_sections):
-    #         self.used_sections[i].append(self.used_sections[i][0])
-    #         centroid = Polygon(self.used_sections[i]).centroid
-    #         self.centroids_lst.append(centroid)
-    #
-    #     # Update the well data based on the current parameter settings
-    #     self.returnWellDataDependingOnParametersTest()
-    #
-    #     # Draw the Township, Section, and Range (TSR) plat on the 2D plot
-    #     self.drawTSRPlat()
-    #
-    #     # Process and display ownership data
-    #     self.colorInOwnership()
-    #     self.ownershipSelection()
-    #
-    #     # Update the owner and agency models with the current data
-    #     owners = sorted(self.docket_ownership_data['owner'].unique())
-    #     agencies = sorted(self.docket_ownership_data['state_legend'].unique())
-    #     self.owner_model.clear()
-    #     self.agency_model.clear()
-    #     for row in owners:
-    #         self.owner_model.appendRow(QStandardItem(row))
-    #     for row in agencies:
-    #         self.agency_model.appendRow(QStandardItem(row))
-    #
-    #     # Update the ownership checkboxes in the UI
-    #     self.updateOwnershipCheckboxes()
-    #
-    #     # Redraw the 2D canvas to reflect all changes
-    #     self.canvas2d.blit(self.ax2d.bbox)
-    #     self.canvas2d.draw()
-    #
-    #     # Update the combo_box_data attribute with the first 10 characters of each well name
-    #     self.combo_box_data = [self.ui.well_lst_combobox.itemText(i)[:10] for i in
-    #                            range(self.ui.well_lst_combobox.count())]
-    #
-    #     # Activate the production buttons in the UI
-    #     self.prodButtonsActivate()
-    #
-    #     # Define the main well statuses and types for counting
-    #     main_statuses = ['Plugged & Abandoned', 'Producing', 'Shut-in', 'Drilling']
-    #     other_statuses = [
-    #         'Location Abandoned - APD rescinded', 'Returned APD (Unapproved)',
-    #         'Approved Permit', 'Active', 'Drilling Operations Suspended',
-    #         'New Permit', 'Inactive', 'Temporarily-abandoned', 'Test Well or Monitor Well'
-    #     ]
-    #     main_types = ['Unknown', 'Oil Well', 'Dry Hole', 'Gas Well', 'Test Well', 'Water Source Well']
-    #     merged_types = {
-    #         'Injection Well': ['Water Injection Well', 'Gas Injection Well'],
-    #         'Disposal Well': ['Water Disposal Well', 'Oil Well/Water Disposal Well'],
-    #         'Other': ['Test Well', 'Water Source Well', 'Unknown']
-    #     }
-    #
-    #     # Update the counters for well statuses and types in the UI
-    #     self.getCountersForStatus(main_statuses, other_statuses)
-    #     self.getCountersForType(main_types, merged_types)
-    #
-    # def comboBoxSetupWellsWhenDocketChanges3(self):
-    #     """
-    #     Updates the well list and related data when a new board docket is selected.
-    #     """
-    #     self.clearDataFrom2dAnd3d()
-    #     self.filterMainDataForDocket()
-    #     self.updateOperatorsModel()
-    #     self.updateWellIDsAndDisplayNames()
-    #     self.filterDirectionalSurveyData()
-    #     self.filterDocketForDirectionalSurveyData()
-    #     self.createFinalSortedListOfWells()
-    #     # self.updateAllWellsTable()
-    #     self.fillInAllWellsTable(self.final_list)
-    #     self.updateWellListComboBox()
-    #     self.makeMainWellsBoldInComboBox()
-    #     self.update2dWhenDocketChanges()
-    #     # self.createDocketDataFrameWithParameters()
-    #     self.df_docket_data = self.returnWellsWithParameters()
-    #     self.setAxesLimits()
-    #     # self.prepareDataForBoardDrillingInfo()
-    #     self.setupDataForBoardDrillingInformation()
-    #     self.update3dViewIfAvailable()
-    #     # self.generateSectionDataFor2DModel()
-    #     self.used_sections, self.all_wells_plat_labels = self.draw2dModelSections()
-    #     self.colorInFields()
-    #     # self.updateWellTypeAndStatusCheckboxes()
-    #     self.update_checkboxes()
-    #     self.calculateCentroidsForSections()
-    #     # self.updateWellDataBasedOnParameters()
-    #     self.returnWellDataDependingOnParametersTest()
-    #     self.drawTSRPlat()
-    #     # self.processAndDisplayOwnershipData()
-    #     self.colorInOwnership()
-    #     self.ownershipSelection()
-    #     self.updateOwnerAndAgencyModels()
-    #     self.updateOwnershipCheckboxes()
-    #     # self.redraw2DCanvas()
-    #     self.canvas2d.blit(self.ax2d.bbox)
-    #     self.canvas2d.draw()
-    #     self.updateComboBoxData()
-    #     self.combo_box_data = [self.ui.well_lst_combobox.itemText(i)[:10] for i in
-    #                            range(self.ui.well_lst_combobox.count())]
-    #     # self.activateProductionButtons()
-    #     self.prodButtonsActivate()
-    #
-    #     self.updateCountersForStatusAndType()
 
     def comboBoxSetupWellsWhenDocketChanges(self) -> None:
         """
@@ -1361,57 +957,39 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         # Update well lists and displays
         self.createFinalSortedListOfWells()
-        # self.updateAllWellsTable()
         self.fillInAllWellsTable(self.final_list)
         self.updateWellListComboBox()
         self.makeMainWellsBoldInComboBox()
 
         # Update visualizations
         self.update2dWhenDocketChanges()
-        # self.createDocketDataFrameWithParameters()
         self.df_docket_data = self.returnWellsWithParameters()
         self.setAxesLimits()
 
         # Process and update additional data
-        # self.prepareDataForBoardDrillingInfo()
         self.setupDataForBoardDrillingInformation()
         self.update3dViewIfAvailable()
-        # self.generateSectionDataFor2DModel()
         self.used_sections, self.all_wells_plat_labels = self.draw2dModelSections()
         self.colorInFields()
 
         # Update UI elements and ownership data
-        # self.updateWellTypeAndStatusCheckboxes()
-        # self.update_checkboxes()
+
         self.create_checkboxes()
         self.calculateCentroidsForSections()
-        # self.updateWellDataBasedOnParameters()
         self.returnWellDataDependingOnParametersTest()
         self.drawTSRPlat()
-        # self.processAndDisplayOwnershipData()
         self.colorInOwnership()
         self.ownershipSelection()
         self.updateOwnerAndAgencyModels()
-        # self.updateOwnershipCheckboxes()
         self.createOwnershipLabels()
 
         # Finalize updates
-        # self.redraw2DCanvas()
         self.canvas2d.blit(self.ax2d.bbox)
         self.canvas2d.draw()
         self.updateComboBoxData()
-        # self.activateProductionButtons()
         self.prodButtonsActivate()
-
         self.updateCountersForStatusAndType()
-    # Helper functions below
 
-    # def filterMainDataForDocket2(self):
-    #     self.df_docket = self.dx_data[
-    #         (self.dx_data['Board_Year'] == self.ui.year_lst_combobox.currentText()) &
-    #         (self.dx_data['Docket_Month'] == self.ui.month_lst_combobox.currentText()) &
-    #         (self.dx_data['Board_Docket'] == self.ui.board_matter_lst_combobox.currentText())
-    #         ]
     def filterMainDataForDocket(self) -> None:
         """
         Filters the main data frame to only include records matching the currently
@@ -1419,17 +997,9 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         The filtered data is stored in self.df_docket for further processing.
         """
-        self.df_docket = self.dx_data[
-            (self.dx_data['Board_Year'] == self.ui.year_lst_combobox.currentText()) &
+        self.df_docket = self.dx_data[(self.dx_data['Board_Year'] == self.ui.year_lst_combobox.currentText()) &
             (self.dx_data['Docket_Month'] == self.ui.month_lst_combobox.currentText()) &
-            (self.dx_data['Board_Docket'] == self.ui.board_matter_lst_combobox.currentText())
-        ]
-
-    # def updateOperatorsModel2(self):
-    #     operators = sorted(self.df_docket['Operator'].unique())
-    #     self.operators_model.clear()
-    #     for row in operators:
-    #         self.operators_model.appendRow(QStandardItem(row))
+            (self.dx_data['Board_Docket'] == self.ui.board_matter_lst_combobox.currentText())]
 
     def updateOperatorsModel(self) -> None:
         """
@@ -1470,13 +1040,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             # Append the item to the model
             self.operators_model.appendRow(item)
 
-
-    # def updateWellIDsAndDisplayNames2(self):
-    #     self.apis = self.df_docket['WellID'].unique()
-    #     self.unique_count = sorted(self.df_docket['DisplayName'].unique())
-
-
-
     def updateWellIDsAndDisplayNames(self) -> None:
         """
         Updates the well identifiers and display names from the current docket data.
@@ -1507,12 +1070,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         # Extract and sort unique display names
         self.unique_count: List[str] = sorted(self.df_docket['DisplayName'].unique())
-
-
-    # def filterDirectionalSurveyData(self):
-    #     self.test_df = (self.dx_df[self.dx_df['APINumber'].isin(self.apis)]
-    #                     .drop_duplicates(keep='first')
-    #                     .sort_values(by=['APINumber', 'MeasuredDepth']))
 
     def filterDirectionalSurveyData(self) -> None:
         """
@@ -1550,12 +1107,11 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             # Remove duplicate entries
             .drop_duplicates(keep='first')
             # Sort by API number and depth for proper trajectory ordering
-            .sort_values(by=['APINumber', 'MeasuredDepth'])
-        )
+            .sort_values(by=['APINumber', 'MeasuredDepth']))
+
     def filterDocketForDirectionalSurveyData2(self):
         unique_apis_with_data = self.test_df['APINumber'].unique()
         self.df_docket = self.df_docket[self.df_docket['WellID'].isin(unique_apis_with_data)]
-
 
     def filterDocketForDirectionalSurveyData(self) -> None:
         """
@@ -1591,13 +1147,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         # Filter docket to include only wells that have directional survey data
         self.df_docket = self.df_docket[self.df_docket['WellID'].isin(unique_apis_with_data)]
-
-
-    # def createFinalSortedListOfWells2(self):
-    #     master_data = self.df_docket[self.df_docket['MainWell'] == 1]
-    #     masters_apds = sorted(master_data['DisplayName'].unique())
-    #     sorted_list = sorted([x for x in self.unique_count if x not in masters_apds])
-    #     self.final_list = masters_apds + sorted_list
 
     def createFinalSortedListOfWells(self) -> None:
         """
@@ -1637,18 +1186,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         # Combine master wells and other wells into final sorted list
         self.final_list: List[str] = masters_apds + sorted_list
-
-
-    # def updateAllWellsTable(self):
-    #     self.fillInAllWellsTable(self.final_list)
-
-    # def updateWellListComboBox2(self):
-    #     self.ui.well_lst_combobox.clear()
-    #     model = QStandardItemModel()
-    #     for item_text in self.final_list:
-    #         item = QStandardItem(item_text)
-    #         model.appendRow(item)
-    #     self.ui.well_lst_combobox.setModel(model)
 
     def updateWellListComboBox(self) -> None:
         """
@@ -1724,9 +1261,7 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             AttributeError: If self.df_docket or self.ui.well_lst_combobox is not initialized
         """
         # Extract and sort display names of main wells
-        masters_apds: List[str] = sorted(
-            self.df_docket[self.df_docket['MainWell'] == 1]['DisplayName'].unique()
-        )
+        masters_apds: List[str] = sorted(self.df_docket[self.df_docket['MainWell'] == 1]['DisplayName'].unique())
 
         # Create delegate for bold formatting of main wells
         delegate: QStyledItemDelegate = BoldDelegate(masters_apds)
@@ -1734,16 +1269,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         # Apply the delegate to the combo box
         self.ui.well_lst_combobox.setItemDelegate(delegate)
 
-    # def makeMainWellsBoldInComboBox2(self):
-    #     masters_apds = sorted(self.df_docket[self.df_docket['MainWell'] == 1]['DisplayName'].unique())
-    #     delegate = BoldDelegate(masters_apds)
-    #     self.ui.well_lst_combobox.setItemDelegate(delegate)
-
-    # def createDocketDataFrameWithParameters(self):
-    #     self.df_docket_data = self.returnWellsWithParameters()
-
-    # def prepareDataForBoardDrillingInfo(self):
-    #     self.setupDataForBoardDrillingInformation()
     def update3dViewIfAvailable(self) -> None:
         """
         Updates the 3D view boundaries based on the centroid of drilled segments.
@@ -1790,23 +1315,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             self.ax3d.set_ylim3d(new_ylim)
             self.ax3d.set_zlim3d(new_zlim)
 
-    # def update3dViewIfAvailable2(self):
-    #     if self.drilled_segments_3d:
-    #         self.centroid, std_vals = self.calculate_centroid_np(self.drilled_segments_3d)
-    #         new_xlim = [self.centroid[0] - 10000, self.centroid[0] + 10000]
-    #         new_ylim = [self.centroid[1] - 10000, self.centroid[1] + 10000]
-    #         new_zlim = [self.centroid[2] - 10000, self.centroid[2] + 10000]
-    #         self.ax3d.set_xlim3d(new_xlim)
-    #         self.ax3d.set_ylim3d(new_ylim)
-    #         self.ax3d.set_zlim3d(new_zlim)
-
-    # def generateSectionDataFor2DModel(self):
-    #     self.used_sections, self.all_wells_plat_labels = self.draw2dModelSections()
-
-    # def updateWellTypeAndStatusCheckboxes(self):
-    #     self.update_checkboxes()
-
-
     def calculateCentroidsForSections(self) -> None:
         """
         Calculates centroids for each well section polygon.
@@ -1845,19 +1353,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             centroid: Point = Polygon(self.used_sections[i]).centroid
             self.centroids_lst.append(centroid)
 
-    # def calculateCentroidsForSections2(self):
-    #     self.centroids_lst = []
-    #     for i, val in enumerate(self.used_sections):
-    #         self.used_sections[i].append(self.used_sections[i][0])
-    #         centroid = Polygon(self.used_sections[i]).centroid
-    #         self.centroids_lst.append(centroid)
-
-    # def updateWellDataBasedOnParameters(self):
-    #     self.returnWellDataDependingOnParametersTest()
-
-    # def processAndDisplayOwnershipData(self):
-    #     self.colorInOwnership()
-    #     self.ownershipSelection()
     def updateOwnerAndAgencyModels(self) -> None:
         """
         Updates the owner and agency list models with unique values from docket ownership data.
@@ -1904,20 +1399,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         for row in agencies:
             self.agency_model.appendRow(QStandardItem(row))
 
-    # def updateOwnerAndAgencyModels2(self):
-    #     owners = sorted(self.docket_ownership_data['owner'].unique())
-    #     agencies = sorted(self.docket_ownership_data['state_legend'].unique())
-    #     self.owner_model.clear()
-    #     self.agency_model.clear()
-    #     for row in owners:
-    #         self.owner_model.appendRow(QStandardItem(row))
-    #     for row in agencies:
-    #         self.agency_model.appendRow(QStandardItem(row))
-
-    # def redraw2DCanvas(self):
-    #     self.canvas2d.blit(self.ax2d.bbox)
-    #     self.canvas2d.draw()
-
     def updateComboBoxData(self) -> None:
         """
         Updates the internal combo box data list with truncated well names.
@@ -1944,124 +1425,8 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             AttributeError: If self.ui.well_lst_combobox is not initialized
         """
         # Create list of truncated well names from combo box
-        self.combo_box_data: List[str] = [
-            self.ui.well_lst_combobox.itemText(i)[:10]
-            for i in range(self.ui.well_lst_combobox.count())
-        ]
-
-
-
-    # def updateComboBoxData(self):
-    #     self.combo_box_data = [self.ui.well_lst_combobox.itemText(i)[:10] for i in
-    #                            range(self.ui.well_lst_combobox.count())]
-
-    # def activateProductionButtons(self):
-    #     self.prodButtonsActivate()
-    # def getCountersForStatus(self, main_status, other_status):
-    #     # Initialize a dictionary to store the counts
-    #     status_counts = {status: 0 for status in main_status}
-    #     status_counts['Other'] = 0
-    #
-    #     # Count occurrences
-    #     for status in main_status:
-    #         status_counts[status] = self.df_docket['CurrentWellStatus'].value_counts().get(status, 0)
-    #
-    #     # Count and sum up 'Other' category
-    #     for status in other_status:
-    #         status_counts['Other'] += self.df_docket['CurrentWellStatus'].value_counts().get(status, 0)
-    #
-    #     self.ui.producing_check.setText(f"""Producing ({str(status_counts['Producing'])})""")
-    #     self.ui.shut_in_check.setText(f"""Shut In ({str(status_counts['Shut-in'])})""")
-    #     self.ui.pa_check.setText(f"""Plugged and Abandoned ({str(status_counts['Plugged & Abandoned'])})""")
-    #     self.ui.drilling_status_check.setText(f"""Drilling ({str(status_counts['Drilling'])})""")
-    #     self.ui.misc_well_type_check.setText(f"""Misc ({str(status_counts['Other'])})""")
-
-    # def updateCountersForStatusAndType2(self):
-    #     main_statuses = ['Plugged & Abandoned', 'Producing', 'Shut-in', 'Drilling']
-    #     other_statuses = [
-    #         'Location Abandoned - APD rescinded', 'Returned APD (Unapproved)',
-    #         'Approved Permit', 'Active', 'Drilling Operations Suspended',
-    #         'New Permit', 'Inactive', 'Temporarily-abandoned', 'Test Well or Monitor Well'
-    #     ]
-    #     main_types = ['Unknown', 'Oil Well', 'Dry Hole', 'Gas Well', 'Test Well', 'Water Source Well']
-    #     merged_types = {
-    #         'Injection Well': ['Water Injection Well', 'Gas Injection Well'],
-    #         'Disposal Well': ['Water Disposal Well', 'Oil Well/Water Disposal Well'],
-    #         'Other': ['Test Well', 'Water Source Well', 'Unknown']
-    #     }
-    #     self.getCountersForStatus(main_statuses, other_statuses)
-    #     self.getCountersForType(main_types, merged_types)
-    #
-    #
-    #
-    #
-    # def getCountersForStatus2(self, main_status, other_status):
-    #     """
-    #     Counts the occurrences of different well statuses and updates the UI accordingly.
-    #
-    #     This method categorizes well statuses into main statuses and 'Other' statuses,
-    #     counts their occurrences in the current docket data, and updates the UI elements
-    #     to display these counts.
-    #
-    #     Parameters:
-    #     main_status (list): A list of strings representing the main well status categories to be counted individually.
-    #     other_status (list): A list of strings representing well status categories to be grouped under 'Other'.
-    #
-    #     The method performs the following steps:
-    #     1. Initializes a counter dictionary for main statuses and 'Other'.
-    #     2. Counts occurrences of main statuses.
-    #     3. Counts and sums up 'Other' statuses.
-    #     4. Updates UI elements with the counted values.
-    #
-    #     Note: This method assumes the existence of self.df_docket DataFrame and specific UI elements.
-    #     """
-    #
-    #     # Step 1: Initialize a dictionary to store the counts
-    #     status_counts = {status: 0 for status in main_status}
-    #     status_counts['Other'] = 0
-    #     # This creates a dictionary with keys for each main status and 'Other', all initialized to 0.
-    #
-    #     # Step 2: Count occurrences of main statuses
-    #     for status in main_status:
-    #         status_counts[status] = self.df_docket['CurrentWellStatus'].value_counts().get(status, 0)
-    #     # For each main status, this counts its occurrences in the 'CurrentWellStatus' column of df_docket.
-    #     # The .get(status, 0) ensures that if a status is not found, it returns 0 instead of raising an error.
-    #
-    #     # Step 3: Count and sum up 'Other' category
-    #     for status in other_status:
-    #         status_counts['Other'] += self.df_docket['CurrentWellStatus'].value_counts().get(status, 0)
-    #     # This sums up the counts of all statuses in the other_status list and adds them to the 'Other' category.
-    #
-    #     # Step 4: Update UI elements with the counted values
-    #     # Each line below updates a specific UI checkbox with the count for its corresponding status
-    #     self.ui.producing_check.setText(f"""Producing ({str(status_counts['Producing'])})""")
-    #     self.ui.shut_in_check.setText(f"""Shut In ({str(status_counts['Shut-in'])})""")
-    #     self.ui.pa_check.setText(f"""Plugged and Abandoned ({str(status_counts['Plugged & Abandoned'])})""")
-    #     self.ui.drilling_status_check.setText(f"""Drilling ({str(status_counts['Drilling'])})""")
-    #     self.ui.misc_well_type_check.setText(f"""Misc ({str(status_counts['Other'])})""")
-    #     # These UI updates assume the existence of specific checkbox elements in the UI,
-    #     # each corresponding to a particular well status or the 'Other' category.
-    #
-    #
-    # def getCountersForType2(self, main_types, merged_types):
-    #     type_counts = {well_type: 0 for well_type in main_types}
-    #     type_counts.update({merged: 0 for merged in merged_types})
-    #     # Count occurrences
-    #     for well_type in main_types:
-    #         type_counts[well_type] = self.df_docket['CurrentWellType'].value_counts().get(well_type, 0)
-    #
-    #     # Count and sum up merged categories
-    #     for merged, subtypes in merged_types.items():
-    #         for subtype in subtypes:
-    #             type_counts[merged] += self.df_docket['CurrentWellType'].value_counts().get(subtype, 0)
-    #
-    #     self.ui.oil_well_check.setText(f"""Oil Well ({str(type_counts['Oil Well'])})""")
-    #     self.ui.gas_well_check.setText(f"""Gas Well ({str(type_counts['Gas Well'])})""")
-    #     self.ui.water_disposal_check.setText(f"""Water Disposal ({str(type_counts['Disposal Well'])})""")
-    #     self.ui.dry_hole_check.setText(f"""Dry Hole ({str(type_counts['Dry Hole'])})""")
-    #     self.ui.injection_check.setText(f"""Injection Well ({str(type_counts['Injection Well'])})""")
-    #     self.ui.other_well_status_check.setText(f"""Other ({str(type_counts['Other'])})""")
-
+        self.combo_box_data: List[str] = [self.ui.well_lst_combobox.itemText(i)[:10]
+            for i in range(self.ui.well_lst_combobox.count())]
 
     def updateCountersForStatusAndType(self) -> None:
         """
@@ -2091,16 +1456,13 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             KeyError: If required DataFrame columns are missing
         """
         # Define primary operational status categories
-        main_statuses: List[str] = [
-            'Plugged & Abandoned',
+        main_statuses: List[str] = ['Plugged & Abandoned',
             'Producing',
             'Shut-in',
-            'Drilling'
-        ]
+            'Drilling']
 
         # Define secondary status categories for 'Other' grouping
-        other_statuses: List[str] = [
-            'Location Abandoned - APD rescinded',
+        other_statuses: List[str] = ['Location Abandoned - APD rescinded',
             'Returned APD (Unapproved)',
             'Approved Permit',
             'Active',
@@ -2108,25 +1470,20 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             'New Permit',
             'Inactive',
             'Temporarily-abandoned',
-            'Test Well or Monitor Well'
-        ]
+            'Test Well or Monitor Well']
 
         # Define primary well type categories
-        main_types: List[str] = [
-            'Unknown',
+        main_types: List[str] = ['Unknown',
             'Oil Well',
             'Dry Hole',
             'Gas Well',
             'Test Well',
-            'Water Source Well'
-        ]
+            'Water Source Well']
 
         # Define merged categories for related well types
-        merged_types: Dict[str, List[str]] = {
-            'Injection Well': ['Water Injection Well', 'Gas Injection Well'],
+        merged_types: Dict[str, List[str]] = {'Injection Well': ['Water Injection Well', 'Gas Injection Well'],
             'Disposal Well': ['Water Disposal Well', 'Oil Well/Water Disposal Well'],
-            'Other': ['Test Well', 'Water Source Well', 'Unknown']
-        }
+            'Other': ['Test Well', 'Water Source Well', 'Unknown']}
 
         # Process and update counters for both classifications
         self.getCountersForStatus(main_statuses, other_statuses)
@@ -2297,10 +1654,8 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             self.df_adjacent_fields['Field_Name'].isin(all_used_fields)]
 
         # Combine original and adjacent field names
-        used_fields_names = list(set(
-            used_fields['adjacent_Field_Name'].values.tolist() +
-            all_used_fields.tolist()
-        ))
+        used_fields_names = list(set(used_fields['adjacent_Field_Name'].values.tolist() +
+            all_used_fields.tolist()))
 
         # Filter fields DataFrame for relevant fields
         used_fields = self.df_field[self.df_field['Field_Name'].isin(used_fields_names)]
@@ -2349,9 +1704,7 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         self.df_all_wells_table = self.df_docket[self.df_docket['DisplayName'].isin(lst)]
         self.df_all_wells_table['DisplayName'] = pd.Categorical(
             self.df_all_wells_table['DisplayName'],
-            categories=lst,
-            ordered=True
-        )
+            categories=lst, ordered=True)
         self.df_all_wells_table.sort_values('DisplayName', inplace=True)
         self.df_all_wells_table.reset_index(drop=True, inplace=True)
 
@@ -2405,16 +1758,13 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         polygons_lst_agency: List[np.ndarray] = []
 
         # Define color mappings for different types of ownership
-        colors_owner: Dict[str, str] = {
-            'Private': '#D2B48C',
+        colors_owner: Dict[str, str] = {'Private': '#D2B48C',
             'Tribal': '#800000',
             'State': '#0000FF',
-            'Federal': '#008000'
-        }
+            'Federal': '#008000'}
 
         # Define color mappings for different agencies
-        colors_agency: Dict[str, str] = {
-            'None': 'white',
+        colors_agency: Dict[str, str] = {'None': 'white',
             'Bureau of Land Management': '#2f4b7c',
             'Bureau of Reclamation': '#003f5c',
             'Department of Defense': '#ffa600',
@@ -2427,8 +1777,7 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             'Other State': '#665191',
             'State Trust Lands': '#2f4b7c',
             'Utah Department of Transportation': '#003f5c',
-            'Tribal': '#800000'
-        }
+            'Tribal': '#800000'}
 
         # Process ownership data and convert to GeoDataFrame
         docket_ownership_data = self.df_owner[self.df_owner['conc'].isin(self.used_plat_codes_for_boards)]
@@ -2478,63 +1827,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         # Generate labels for ownership visualization
         self.createOwnershipLabels()
-
-
-    # def colorInOwnership2(self):
-    #     polygons_lst_owner, polygons_lst_agency = [], []
-    #     colors_owner = {'Private': '#D2B48C',
-    #                     'Tribal': '#800000',
-    #                     'State': '#0000FF',
-    #                     'Federal': '#008000'}
-    #     colors_agency = {'None': 'white',
-    #                      'Bureau of Land Management': '#2f4b7c',
-    #                      'Bureau of Reclamation': '#003f5c',
-    #                      'Department of Defense': '#ffa600',
-    #                      'Department of Energy': '#ff7c43',
-    #                      'National Park Service': '#ff7c43',
-    #                      'Private': '#D2B48C',
-    #                      'Utah State Forestry Service': '#f95d6a',
-    #                      'United States Fish and Wildlife Service': '#d45087',
-    #                      'Department of Natural Resources': '#a05195',
-    #                      'Other State': '#665191',
-    #                      'State Trust Lands': '#2f4b7c',
-    #                      'Utah Department of Transportation': '#003f5c',
-    #                      'Tribal': '#800000'}
-    #
-    #     docket_ownership_data = self.df_owner[self.df_owner['conc'].isin(self.used_plat_codes_for_boards)]
-    #     docket_ownership_data['geometry'] = docket_ownership_data['geometry'].apply(wkt.loads)
-    #     docket_ownership_data = gpd.GeoDataFrame(docket_ownership_data, geometry='geometry', crs='EPSG:4326')
-    #     docket_ownership_data = docket_ownership_data.to_crs(epsg=26912)
-    #     docket_ownership_data['owner_color'] = docket_ownership_data['owner'].map(colors_owner)
-    #     docket_ownership_data['agency_color'] = docket_ownership_data['state_legend'].map(colors_agency)
-    #
-    #     docket_ownership_data['owner_order'] = docket_ownership_data.groupby('owner').cumcount() + 1
-    #     docket_ownership_data['agency_order'] = docket_ownership_data.groupby('state_legend').cumcount() + 1
-    #
-    #     docket_ownership_data = docket_ownership_data.drop_duplicates(keep='first')
-    #     self.docket_ownership_data = docket_ownership_data
-    #     grouped_rows_owner = docket_ownership_data.groupby('owner')
-    #     grouped_rows_agency = docket_ownership_data.groupby('state_legend')
-    #     colors_owner_used, colors_agency_used = [], []
-    #     for conc, group in grouped_rows_owner:
-    #         for idx, row in group.iterrows():
-    #             coordinates = list(row['geometry'].exterior.coords)
-    #             polygons_lst_owner.append(np.array(coordinates))
-    #             colors_owner_used.append(row['owner_color'])
-    #
-    #     for conc, group in grouped_rows_agency:
-    #         for idx, row in group.iterrows():
-    #             coordinates = list(row['geometry'].exterior.coords)
-    #             polygons_lst_agency.append(np.array(coordinates))
-    #             colors_agency_used.append(row['agency_color'])
-    #
-    #     self.ownership_sections_agency.set_color(colors_agency_used)
-    #     self.ownership_sections_agency.set_paths(polygons_lst_agency)
-    #     self.ownership_sections_agency.set_visible(False)
-    #     self.ownership_sections_owner.set_color(colors_owner_used)
-    #     self.ownership_sections_owner.set_paths(polygons_lst_owner)
-    #     self.ownership_sections_owner.set_visible(False)
-    #     self.createOwnershipLabels()
 
     def colorInFields2(self):
         # Here's a big list of distinctive colors,hopefully colorblind friendly.
@@ -2654,19 +1946,13 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         """
         # Extract row data from the model
         row: int = index.row()
-        row_data: List[Any] = [
-            self.all_wells_model.data(self.all_wells_model.index(row, column))
-            for column in range(self.all_wells_model.columnCount())
-        ]
+        row_data: List[Any] = [self.all_wells_model.data(self.all_wells_model.index(row, column))
+            for column in range(self.all_wells_model.columnCount())]
 
         # Filter well data based on API Number and extract coordinates
-        filtered_df: pd.DataFrame = self.currently_used_lines[
-            self.currently_used_lines['APINumber'] == row_data[0]
-            ]
+        filtered_df: pd.DataFrame = self.currently_used_lines[self.currently_used_lines['APINumber'] == row_data[0]]
         data_select_2d: np.ndarray = filtered_df[['X', 'Y']].to_numpy().astype(float)
-        data_select_3d: np.ndarray = filtered_df[
-            ['SPX', 'SPY', 'Targeted Elevation']
-        ].to_numpy().astype(float)
+        data_select_3d: np.ndarray = filtered_df[['SPX', 'SPY', 'Targeted Elevation']].to_numpy().astype(float)
 
         # Update well path data
         self.selected_well_2d_path: List[List[float]] = data_select_2d.tolist()
@@ -2678,28 +1964,20 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         self.ui.well_lst_combobox.setCurrentIndex(target_index)
 
         # Define data categories for table population
-        row_1_data: List[str] = [
-            'WellID', 'WellName', 'SideTrack', 'WorkType', 'Slant',
+        row_1_data: List[str] = ['WellID', 'WellName', 'SideTrack', 'WorkType', 'Slant',
             'APDReceivedDate', 'APDReturnDate', 'APDApprovedDate',
-            'APDExtDate', 'APDRescindDate', 'DrySpud', 'RotarySpud'
-        ]
-        row_2_data: List[str] = [
-            'WCRCompletionDate', 'WellStatusReport', 'WellTypeReport',
+            'APDExtDate', 'APDRescindDate', 'DrySpud', 'RotarySpud']
+        row_2_data: List[str] = ['WCRCompletionDate', 'WellStatusReport', 'WellTypeReport',
             'FirstProdDate', 'TestDate', 'ProductionMethod', 'OilRate',
-            'GasRate', 'WaterRate', 'DST', 'DirSurveyRun', 'CompletionType'
-        ]
-        row_3_data: List[str] = [
-            'MD', 'TVD', 'Perforation MD', 'Perforation TVD',
+            'GasRate', 'WaterRate', 'DST', 'DirSurveyRun', 'CompletionType']
+        row_3_data: List[str] = ['MD', 'TVD', 'Perforation MD', 'Perforation TVD',
             'CurrentWellStatus', 'CurrentWellType', 'Total Gas Prod',
             'Total Oil Prod', 'WellAge', 'Last Production (if Shut In)',
-            'Months Shut In'
-        ]
+            'Months Shut In']
 
         # Create dictionary and DataFrame for data organization
         all_columns: List[str] = row_1_data + row_2_data + row_3_data
-        result_dict: Dict[str, Any] = {
-            col: value for col, value in zip(all_columns, row_data)
-        }
+        result_dict: Dict[str, Any] = {col: value for col, value in zip(all_columns, row_data)}
         test_df: pd.DataFrame = pd.DataFrame([result_dict])
 
         # Populate the three data tables with well information
@@ -2712,45 +1990,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         # Update 2D visualization
         self.update2dSelectedWhenWellChanges()
-    # def on_row_clicked2(self, index: QModelIndex):
-    #     row = index.row()
-    #     row_data = [self.all_wells_model.data(self.all_wells_model.index(row, column)) for column in range(self.all_wells_model.columnCount())]
-    #     """Filter based on API Number"""
-    #     filtered_df = self.currently_used_lines[self.currently_used_lines['APINumber'] == row_data[0]]
-    #     data_select_2d = filtered_df[['X', 'Y']].to_numpy().astype(float)
-    #     data_select_3d = filtered_df[['SPX', 'SPY', 'Targeted Elevation']].to_numpy().astype(float)
-    #
-    #     """Add wells to list"""
-    #     self.selected_well_2d_path = data_select_2d.tolist()
-    #     self.selected_well_3d_path = data_select_3d.tolist()
-    #
-    #     """Set the selected well, and change the combo box to match"""
-    #     self.targeted_well = row_data[0]
-    #     target_index = self.combo_box_data.index(self.targeted_well)
-    #     self.ui.well_lst_combobox.setCurrentIndex(target_index)
-    #
-    #     """Fill in the data rows"""
-    #     row_1_data = ['WellID', 'WellName', 'SideTrack', 'WorkType', 'Slant', 'APDReceivedDate', 'APDReturnDate',
-    #                   'APDApprovedDate', 'APDExtDate', 'APDRescindDate', 'DrySpud', 'RotarySpud']
-    #     row_2_data = ['WCRCompletionDate', 'WellStatusReport', 'WellTypeReport', 'FirstProdDate', 'TestDate',
-    #                   'ProductionMethod', 'OilRate', 'GasRate', 'WaterRate', 'DST', 'DirSurveyRun', 'CompletionType']
-    #     row_3_data = ['MD', 'TVD', 'Perforation MD', 'Perforation TVD', 'CurrentWellStatus', 'CurrentWellType',
-    #                   'Total Gas Prod', 'Total Oil Prod', 'WellAge', 'Last Production (if Shut In)', 'Months Shut In']
-    #     all_columns = row_1_data + row_2_data + row_3_data
-    #     result_dict = {col: value for col, value in zip(all_columns, row_data)}
-    #     test_df = pd.DataFrame([result_dict])
-    #     # Parse and fill out the data rows
-    #     for i, value in enumerate(row_1_data):
-    #         self.ui.well_data_table_1.item(0, i).setText(str(test_df[value].item()))
-    #     for i, value in enumerate(row_2_data):
-    #         self.ui.well_data_table_2.item(0, i).setText(str(test_df[value].iloc[0]))
-    #     for i, value in enumerate(row_3_data):
-    #         self.ui.well_data_table_3.item(0, i).setText(str(test_df[value].iloc[0]))
-    #     self.update2dSelectedWhenWellChanges()
-    #
-    #     # self.comboUpdateWhenSelectedFromAllWellsTable(row_data)
-
-    """This just clears all the data."""
 
     def clearDataFrom2dAnd3d(self) -> None:
         """
@@ -2788,25 +2027,16 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         # Reset 2D and 3D well visualizations
         for model_type in ['current', 'planned', 'asdrilled']:
             # Update 2D models
-            self.drawModelBasedOnParameters2d(
-                getattr(self, f'all_wells_2d_{model_type}'),
-                [], [], [], self.ax2d,
-                getattr(self, f'all_wells_2d_vertical_{model_type}')
-            )
+            self.drawModelBasedOnParameters2d(getattr(self, f'all_wells_2d_{model_type}'),
+                [], [], [], self.ax2d, getattr(self, f'all_wells_2d_vertical_{model_type}'))
             # Update 3D models
-            self.drawModelBasedOnParameters(
-                getattr(self, f'all_wells_3d_{model_type}'),
-                [], [], [], self.ax3d
-            )
+            self.drawModelBasedOnParameters(getattr(self, f'all_wells_3d_{model_type}'),
+                [], [], [], self.ax3d)
 
         # Clear operator-specific well visualizations
         for i in range(len(self.all_wells_2d_operators)):
-            self.drawModelBasedOnParameters2d(
-                self.all_wells_2d_operators[i],
-                [], [], [],
-                self.ax2d,
-                self.all_wells_2d_operators_vertical[i]
-            )
+            self.drawModelBasedOnParameters2d(self.all_wells_2d_operators[i],
+                [], [], [], self.ax2d, self.all_wells_2d_operators_vertical[i])
 
         # Reset 3D specific well properties
         for well_obj in [self.spec_well_3d, self.spec_well_3d_solo]:
@@ -2819,26 +2049,15 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         self.spec_well_2d.set_data([], [])
 
         # Reset plat visualizations
-        for plat_collection in [
-            self.plats_2d, self.plats_2d_main,
-            self.plats_2d_1adjacent, self.plats_2d_2adjacent
-        ]:
+        for plat_collection in [self.plats_2d, self.plats_2d_main, self.plats_2d_1adjacent, self.plats_2d_2adjacent]:
             plat_collection.set_segments([])
 
         # Clear section and ownership visualizations
-        for section_collection in [
-            self.ownership_sections_agency,
-            self.ownership_sections_owner,
-            self.field_sections,
-            self.outlined_board_sections
-        ]:
+        for section_collection in [self.ownership_sections_agency, self.ownership_sections_owner, self.field_sections, self.outlined_board_sections]:
             section_collection.set_paths([])
 
         # Reset production data visualizations
-        for line in [
-            self.profit_line, self.profit_line_cum,
-            self.prod_line, self.prod_line_cum
-        ]:
+        for line in [self.profit_line, self.profit_line_cum, self.prod_line, self.prod_line_cum]:
             line.set_data([], [])
 
         # Clear well data tables
@@ -2846,11 +2065,7 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             0, self.specific_well_data_model.rowCount()
         )
         for i in range(11):
-            for table in [
-                self.ui.well_data_table_1,
-                self.ui.well_data_table_2,
-                self.ui.well_data_table_3
-            ]:
+            for table in [self.ui.well_data_table_1, self.ui.well_data_table_2, self.ui.well_data_table_3]:
                 table.item(0, i).setText('')
 
         # Clear zoom/pan text objects
@@ -2859,11 +2074,7 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         self.zp.text_objects = []
 
         # Update all canvases
-        for canvas in [
-            self.canvas_prod_1, self.canvas_prod_2,
-            self.canvas3d_solo, self.canvas2d,
-            self.canvas3d
-        ]:
+        for canvas in [self.canvas_prod_1, self.canvas_prod_2, self.canvas3d_solo, self.canvas2d, self.canvas3d]:
             canvas.draw()
 
         # Special handling for 2D canvas
@@ -2877,8 +2088,7 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         self.all_wells_2d_operators_vertical = []
 
         # Reset checkbox labels
-        checkbox_labels = {
-            'producing_check': 'Producing',
+        checkbox_labels = {'producing_check': 'Producing',
             'shut_in_check': 'Shut In',
             'pa_check': 'Plugged and Abandoned',
             'drilling_status_check': 'Drilling',
@@ -2888,88 +2098,11 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             'water_disposal_check': 'Water Disposal',
             'dry_hole_check': 'Dry Hole',
             'injection_check': 'Injection Well',
-            'other_well_status_check': 'Other'
-        }
+            'other_well_status_check': 'Other'}
 
         for check_name, label in checkbox_labels.items():
             getattr(self.ui, check_name).setText(f"{label}")
 
-    # def clearDataFrom2dAnd3d2(self):
-    #     self.used_plat_codes = []
-    #     self.ui.sectionsBoardComboBox.clear()
-    #     self.ui.board_matter_files.clear()
-    #     self.ui.board_brief_text.clear()
-    #     self.ui.board_brief_text.clear()
-    #
-    #     self.drawModelBasedOnParameters2d(self.all_wells_2d_current, [], [], [], self.ax2d, self.all_wells_2d_vertical_asdrilled)
-    #     self.drawModelBasedOnParameters(self.all_wells_3d_current, [], [], [], self.ax3d)
-    #
-    #     self.drawModelBasedOnParameters2d(self.all_wells_2d_planned, [], [], [], self.ax2d, self.all_wells_2d_vertical_planned)
-    #     self.drawModelBasedOnParameters(self.all_wells_3d_planned, [], [], [], self.ax3d)
-    #
-    #     self.drawModelBasedOnParameters2d(self.all_wells_2d_asdrilled, [], [], [], self.ax2d, self.all_wells_2d_vertical_current)
-    #     self.drawModelBasedOnParameters(self.all_wells_3d_asdrilled, [], [], [], self.ax3d)
-    #
-    #     for i in range(len(self.all_wells_2d_operators)):
-    #         self.drawModelBasedOnParameters2d(self.all_wells_2d_operators[i], [], [], [], self.ax2d, self.all_wells_2d_operators_vertical[i])
-    #
-    #     self.spec_well_3d.set_data([], [])
-    #     self.spec_well_3d.set_3d_properties([])
-    #
-    #     self.spec_well_3d_solo.set_data([], [])
-    #     self.spec_well_3d_solo.set_3d_properties([])
-    #     self.spec_well_3d.set_data([], [])
-    #     self.spec_well_3d.set_3d_properties([])
-    #     self.all_vertical_wells_2d.set_offsets([None, None])
-    #     self.spec_vertical_wells_2d.set_offsets([None, None])
-    #     self.spec_well_2d.set_data([], [])
-    #     self.plats_2d.set_segments([])
-    #     self.plats_2d_main.set_segments([])
-    #     self.plats_2d_1adjacent.set_segments([])
-    #     self.plats_2d_2adjacent.set_segments([])
-    #
-    #     self.ownership_sections_agency.set_paths([])
-    #     self.ownership_sections_owner.set_paths([])
-    #     self.field_sections.set_paths([])
-    #     self.profit_line.set_data([], [])
-    #     self.profit_line_cum.set_data([], [])
-    #     self.prod_line.set_data([], [])
-    #     self.prod_line_cum.set_data([], [])
-    #     self.outlined_board_sections.set_paths([])
-    #     self.specific_well_data_model.removeRows(0, self.specific_well_data_model.rowCount())
-    #
-    #     for i in range(11):
-    #         self.ui.well_data_table_1.item(0, i).setText('')
-    #         self.ui.well_data_table_2.item(0, i).setText('')
-    #         self.ui.well_data_table_3.item(0, i).setText('')
-    #
-    #     for text in self.zp.text_objects:
-    #         text.remove()
-    #     self.zp.text_objects = []
-    #     self.canvas_prod_1.draw()
-    #     self.canvas_prod_2.draw()
-    #     self.ax2d.draw_artist(self.all_vertical_wells_2d)
-    #     self.canvas3d_solo.draw()
-    #     self.canvas2d.blit(self.ax2d.bbox)
-    #     self.canvas2d.draw()
-    #     self.canvas3d.blit(self.ax3d.bbox)
-    #     self.canvas3d.draw()
-    #     self.ui.all_wells_qtableview.setModel(None)
-    #     self.all_wells_2d_operators = []
-    #     self.all_wells_2d_operators_vertical = []
-    #     self.ui.producing_check.setText(f"""Producing)""")
-    #     self.ui.shut_in_check.setText(f"""Shut In""")
-    #     self.ui.pa_check.setText(f"""Plugged and Abandoned""")
-    #     self.ui.drilling_status_check.setText(f"""Drilling""")
-    #     self.ui.misc_well_type_check.setText(f"""Misc""")
-    #     self.ui.oil_well_check.setText(f"""Oil Well""")
-    #     self.ui.gas_well_check.setText(f"""Gas Well""")
-    #     self.ui.water_disposal_check.setText(f"""Water Disposal""")
-    #     self.ui.dry_hole_check.setText(f"""Dry Hole""")
-    #     self.ui.injection_check.setText(f"""Injection Well""")
-    #     self.ui.other_well_status_check.setText(f"""Other""")
-
-    """Set the axes limits for the 2d image based on the data that is found."""
     def setAxesLimits(self) -> None:
         """
         Sets the axes limits for the 2D visualization based on the data points' distribution.
@@ -3004,9 +2137,7 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         segments: List[List[Tuple[float, float]]] = self.returnSegmentsFromDF(self.df_docket_data)
 
         # Convert segments to unique coordinate points
-        flattened_list: List[Tuple[float, float]] = [
-            tuple(point) for sublist in segments for point in sublist
-        ]
+        flattened_list: List[Tuple[float, float]] = [tuple(point) for sublist in segments for point in sublist]
         unique_points: np.ndarray = np.array(list(set(flattened_list)))
 
         # Calculate boundary values from coordinate points
@@ -3018,21 +2149,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         # Set axis limits with padding
         self.ax2d.set_xlim([min_x - 16000, max_x + 16000])  # Add x-axis buffer
         self.ax2d.set_ylim([min_y - 16000, max_y + 16000])  # Add y-axis buffer
-
-
-    # def setAxesLimits2(self):
-    #     # Generate all line segments
-    #     segments = self.returnSegmentsFromDF(self.df_docket_data)
-    #     # flatten the whole thing into one list and then convert it into a numpy array
-    #     flattened_list = [tuple(point) for sublist in segments for point in sublist]
-    #     unique_points = np.array(list(set(flattened_list)))
-    #     # get mins and maxes and adjust the 2d axes accordingly.
-    #     min_x = np.min(unique_points[:, 0])
-    #     max_x = np.max(unique_points[:, 0])
-    #     min_y = np.min(unique_points[:, 1])
-    #     max_y = np.max(unique_points[:, 1])
-    #     self.ax2d.set_xlim([min_x - 16000, max_x + 16000])
-    #     self.ax2d.set_ylim([min_y - 16000, max_y + 16000])
 
     def onClick2d(self, event: MouseEvent) -> None:
         """
@@ -3075,33 +2191,24 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             # Calculate distances to all visible wells
             self.currently_used_lines['distance'] = np.sqrt(
                 (self.currently_used_lines['X'].astype(float) - x_selected) ** 2 +
-                (self.currently_used_lines['Y'].astype(float) - y_selected) ** 2
-            )
+                (self.currently_used_lines['Y'].astype(float) - y_selected) ** 2)
 
             # Filter wells within selection threshold
-            closest_points: pd.DataFrame = self.currently_used_lines[
-                self.currently_used_lines['distance'] < limit
-                ]
+            closest_points: pd.DataFrame = self.currently_used_lines[self.currently_used_lines['distance'] < limit]
 
             if not closest_points.empty:
                 # Identify closest well
-                closest_point: pd.Series = closest_points.loc[
-                    closest_points['distance'].idxmin()
-                ]
+                closest_point: pd.Series = closest_points.loc[closest_points['distance'].idxmin()]
 
                 # Get API number of selected well
                 selected_well_api: str = closest_point['APINumber']
 
                 # Filter full well data
-                filtered_df: pd.DataFrame = self.currently_used_lines[
-                    self.currently_used_lines['APINumber'] == selected_well_api
-                    ]
+                filtered_df: pd.DataFrame = self.currently_used_lines[self.currently_used_lines['APINumber'] == selected_well_api]
 
                 # Extract 2D and 3D coordinate data
                 data_select_2d: np.ndarray = filtered_df[['X', 'Y']].to_numpy().astype(float)
-                data_select_3d: np.ndarray = filtered_df[
-                    ['SPX', 'SPY', 'Targeted Elevation']
-                ].to_numpy().astype(float)
+                data_select_3d: np.ndarray = filtered_df[['SPX', 'SPY', 'Targeted Elevation']].to_numpy().astype(float)
 
                 # Update instance variables with selected well data
                 self.selected_well_2d_path: List[List[float]] = data_select_2d.tolist()
@@ -3114,51 +2221,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
                 # Update well information display
                 self.comboUpdateWhenWellChanges()
-
-    # def onClick2d(self, event):
-    #     if event.inaxes is not None:
-    #         x_selected, y_selected = event.xdata, event.ydata
-    #         # When you click to select wells, there needs to be a threshold established for how close you have to click before it is registered as selected
-    #
-    #         # Find that rough selection distance
-    #         limit = (np.diff(self.ax2d.get_xlim())[0] + np.diff(self.ax2d.get_ylim())[0]) / 80
-    #
-    #         # Find the distance from the point that was selected to all other wells that are currently displayed
-    #         self.currently_used_lines['distance'] = np.sqrt((self.currently_used_lines['X'].astype(float) - x_selected) ** 2 + (self.currently_used_lines['Y'].astype(float) - y_selected) ** 2)
-    #
-    #         # Create a dataframe of points that are within the limit distance of the actively found points
-    #         closest_points = self.currently_used_lines[self.currently_used_lines['distance'] < limit]
-    #
-    #         # do this assuming there *are* points within that distance
-    #         if not closest_points.empty:
-    #             # Find the closest point
-    #             closest_point = closest_points.loc[closest_points['distance'].idxmin()]
-    #
-    #             # get the api identification for that closest point
-    #             selected_well_api = closest_point['APINumber']
-    #
-    #             # generate a dataframe that is the full data for the well with that API Number
-    #             filtered_df = self.currently_used_lines[self.currently_used_lines['APINumber'] == selected_well_api]
-    #
-    #             # convert data types (partly routine)
-    #             data_select_2d = filtered_df[['X', 'Y']].to_numpy().astype(float)
-    #             data_select_3d = filtered_df[['SPX', 'SPY', 'Targeted Elevation']].to_numpy().astype(float)
-    #
-    #             # Add the data to the self. elements
-    #             self.selected_well_2d_path = data_select_2d.tolist()
-    #             self.selected_well_3d_path = data_select_3d.tolist()
-    #             self.targeted_well = selected_well_api
-    #
-    #             # Search the combo box and find the index where this occurs
-    #             target_index = self.combo_box_data.index(self.targeted_well)
-    #
-    #             # Update the combobox with the found index
-    #             self.ui.well_lst_combobox.setCurrentIndex(target_index)
-    #
-    #             # Run all the appropriate processes that should be run when the selected well is instantiated(?)
-    #             self.comboUpdateWhenWellChanges()
-
-    """# This will update the 2d data. Relative Elevation, targeted data, etc"""
 
     def update2dWhenDocketChanges(self) -> None:
         """
@@ -3195,14 +2257,11 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         api_number: str = current_text[:10]  # First 10 chars represent API number
 
         # Filter well data based on API number
-        filtered_df: pd.DataFrame = self.dx_df[
-            self.dx_df['APINumber'] == api_number]
+        filtered_df: pd.DataFrame = self.dx_df[self.dx_df['APINumber'] == api_number]
 
         # Extract and convert coordinate data
         data_select_2d: np.ndarray = filtered_df[['X', 'Y']].to_numpy().astype(float)
-        data_select_3d: np.ndarray = filtered_df[
-            ['X', 'Y', 'TrueVerticalDepth']
-        ].to_numpy().astype(float)
+        data_select_3d: np.ndarray = filtered_df[['X', 'Y', 'TrueVerticalDepth']].to_numpy().astype(float)
 
         # Update instance variables with new coordinate data
         self.selected_well_2d_path: List[List[float]] = data_select_2d.tolist()
@@ -3215,27 +2274,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         # Update DataFrames with relative elevation calculations
         self.dx_df['Targeted Elevation'] = (self.dx_df['TrueElevation'] - self.targeted_well_elevation)
         self.dx_data['Relative Elevation'] = (self.dx_data['Elevation'] - self.targeted_well_elevation)
-
-    # def update2dWhenDocketChanges(self):
-    #     # get the current text
-    #     current_text = self.ui.well_lst_combobox.currentText()
-    #
-    #     # filter down the api numbers at 10 values
-    #     filtered_df = self.dx_df[self.dx_df['APINumber'] == current_text[:10]]
-    #
-    #     # set to appropriate data types
-    #     data_select_2d = filtered_df[['X', 'Y']].to_numpy().astype(float)
-    #     data_select_3d = filtered_df[['X', 'Y', 'TrueVerticalDepth']].to_numpy().astype(float)
-    #     # add to lists
-    #     self.selected_well_2d_path = data_select_2d.tolist()
-    #     self.selected_well_3d_path = data_select_3d.tolist()
-    #     # set the targeted well to the current text (again, 10 data values)
-    #     self.targeted_well = current_text[:10]
-    #
-    #     # This is for creating a relative elevation for a deprecated function. the idea was that if the targeted well was at elevation 0, what would the other well elevations be relative to it?
-    #     self.targeted_well_elevation = self.dx_data['Elevation'].iloc[0]
-    #     self.dx_df['Targeted Elevation'] = self.dx_df['TrueElevation'] - self.targeted_well_elevation
-    #     self.dx_data['Relative Elevation'] = self.dx_data['Elevation'] - self.targeted_well_elevation
 
     def comboUpdateWhenWellChanges(self) -> None:
         """
@@ -3266,11 +2304,9 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             >>> self.comboUpdateWhenWellChanges()  # Updates UI after well selection change
         """
         # Filter data frame based on current UI selections
-        df_month: pd.DataFrame = self.dx_data[
-            (self.dx_data['Board_Year'] == self.ui.year_lst_combobox.currentText()) &
+        df_month: pd.DataFrame = self.dx_data[(self.dx_data['Board_Year'] == self.ui.year_lst_combobox.currentText()) &
             (self.dx_data['Docket_Month'] == self.ui.month_lst_combobox.currentText()) &
-            (self.dx_data['Board_Docket'] == self.ui.board_matter_lst_combobox.currentText())
-            ]
+            (self.dx_data['Board_Docket'] == self.ui.board_matter_lst_combobox.currentText())]
 
         # Get current well selection
         current_text: str = self.ui.well_lst_combobox.currentText()
@@ -3280,29 +2316,20 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         # Handle multiple records by selecting most recent
         if len(current_data_row) > 1:
-            current_data_row = current_data_row.sort_values(
-                by='APDApprovedDate',
-                ascending=False
-            ).head(1)
+            current_data_row = current_data_row.sort_values(by='APDApprovedDate', ascending=False).head(1)
 
         # Define data fields for each table
-        row_1_data: List[str] = [
-            'WellID', 'WellName', 'SideTrack', 'CurrentWellStatus', 'CurrentWellType',
+        row_1_data: List[str] = ['WellID', 'WellName', 'SideTrack', 'CurrentWellStatus', 'CurrentWellType',
             'APDReceivedDate', 'APDReturnDate', 'APDApprovedDate', 'APDExtDate',
-            'APDRescindDate', 'DrySpud', 'RotarySpud'
-        ]
+            'APDRescindDate', 'DrySpud', 'RotarySpud']
 
-        row_2_data: List[str] = [
-            'WellStatusReport', 'WellTypeReport', 'FirstProdDate', 'WCRCompletionDate',
+        row_2_data: List[str] = ['WellStatusReport', 'WellTypeReport', 'FirstProdDate', 'WCRCompletionDate',
             'TestDate', 'ProductionMethod', 'OilRate', 'GasRate', 'WaterRate', 'DST',
-            'DirSurveyRun', 'CompletionType'
-        ]
+            'DirSurveyRun', 'CompletionType']
 
-        row_3_data: List[str] = [
-            'GasVolume', 'OilVolume', 'WellAge', 'Last Production (if Shut In)',
+        row_3_data: List[str] = ['GasVolume', 'OilVolume', 'WellAge', 'Last Production (if Shut In)',
             'Months Shut In', 'Operator', 'MD', 'TVD', 'Perforation MD',
-            'Perforation TVD', 'WorkType', 'Slant'
-        ]
+            'Perforation TVD', 'WorkType', 'Slant']
 
         # Setup table structure
         self.setupTableData([row_1_data, row_2_data, row_3_data], current_data_row)
@@ -3320,34 +2347,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         # Update 2D visualization
         self.update2dSelectedWhenWellChanges()
 
-    # def comboUpdateWhenWellChanges(self):
-    #     # filter and restrict the data frame down to the relevant docket and well data
-    #
-    #     df_month = self.dx_data[(self.dx_data['Board_Year'] == self.ui.year_lst_combobox.currentText())
-    #                             & (self.dx_data['Docket_Month'] == self.ui.month_lst_combobox.currentText())
-    #                             & (self.dx_data['Board_Docket'] == self.ui.board_matter_lst_combobox.currentText())]
-    #
-    #     # get the current text in the combo box so that we know what we're looking at.
-    #     current_text = self.ui.well_lst_combobox.currentText()
-    #
-    #     # restrict down to the current data row.
-    #     current_data_row = df_month[df_month['DisplayName'] == current_text]
-    #     if len(current_data_row) > 1:
-    #         current_data_row = current_data_row.sort_values(by='APDApprovedDate', ascending=False).head(1)
-    #     # I'm sure there's a better way to do this, but this is for filling out data in the table with the appropriate value in case for some reason the data order is scrambled.
-    #     row_1_data = ['WellID', 'WellName', 'SideTrack', 'CurrentWellStatus', 'CurrentWellType', 'APDReceivedDate', 'APDReturnDate', 'APDApprovedDate', 'APDExtDate', 'APDRescindDate', 'DrySpud', 'RotarySpud']
-    #     row_2_data = ['WellStatusReport', 'WellTypeReport', 'FirstProdDate', 'WCRCompletionDate', 'TestDate', 'ProductionMethod', 'OilRate', 'GasRate', 'WaterRate', 'DST', 'DirSurveyRun', 'CompletionType']
-    #
-    #     row_3_data = ['GasVolume', 'OilVolume', 'WellAge', 'Last Production (if Shut In)', 'Months Shut In', 'Operator', 'MD', 'TVD', 'Perforation MD', 'Perforation TVD', 'WorkType', 'Slant', ]
-    #
-    #     self.setupTableData([row_1_data, row_2_data, row_3_data], current_data_row)
-    #     for i, value in enumerate(row_1_data):
-    #         self.ui.well_data_table_1.item(0, i).setText(str(current_data_row[value].item()))
-    #     for i, value in enumerate(row_2_data):
-    #         self.ui.well_data_table_2.item(0, i).setText(str(current_data_row[value].iloc[0]))
-    #     for i, value in enumerate(row_3_data):
-    #         self.ui.well_data_table_3.item(0, i).setText(str(current_data_row[value].iloc[0]))
-    #     self.update2dSelectedWhenWellChanges()
     def setupTableData(self, row_data: List[List[str]], df: pd.DataFrame) -> None:
         """
         Sets up and populates a table view with well data using a custom model and delegate.
@@ -3382,16 +2381,12 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         self.specific_well_data_model.removeRows(0, self.specific_well_data_model.rowCount())
 
         # Define modified headers for the third row
-        row_3_data_edited: List[str] = [
-            'GasVolume', 'OilVolume', 'WellAge', 'Recorded Last Production',
+        row_3_data_edited: List[str] = ['GasVolume', 'OilVolume', 'WellAge', 'Recorded Last Production',
             'Months Shut In (if applicable)', 'Operator', 'MD', 'TVD',
-            'Perforation MD', 'Perforation TVD', 'WorkType', 'Slant'
-        ]
+            'Perforation MD', 'Perforation TVD', 'WorkType', 'Slant']
 
         # Initialize data structure for table population
-        data_used_lst: List[List[str]] = [
-            row_data[0], [], row_data[1], [], row_3_data_edited, []
-        ]
+        data_used_lst: List[List[str]] = [row_data[0], [], row_data[1], [], row_3_data_edited, []]
 
         # Populate data rows from DataFrame
         for i, value in enumerate(row_data[0]):
@@ -3408,11 +2403,9 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         # Configure table view display settings
         self.ui.well_data_table_view.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeToContents
-        )
+            QHeaderView.ResizeToContents)
         self.ui.well_data_table_view.verticalHeader().setSectionResizeMode(
-            QHeaderView.ResizeToContents
-        )
+            QHeaderView.ResizeToContents)
         self.ui.well_data_table_view.horizontalHeader().setVisible(False)
         self.ui.well_data_table_view.verticalHeader().setVisible(False)
         self.ui.well_data_table_view.setModel(self.specific_well_data_model)
@@ -3421,32 +2414,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         bold_rows: List[int] = [0, 2, 4]
         delegate = MultiBoldRowDelegate(bold_rows)
         self.ui.well_data_table_view.setItemDelegate(delegate)
-
-    # def setupTableData(self, row_data, df):
-    #     self.specific_well_data_model.removeRows(0, self.specific_well_data_model.rowCount())
-    #     row_3_data_edited = ['GasVolume', 'OilVolume', 'WellAge', 'Recorded Last Production', 'Months Shut In (if applicable)', 'Operator', 'MD', 'TVD', 'Perforation MD', 'Perforation TVD', 'WorkType', 'Slant', ]
-    #
-    #     data_used_lst = [row_data[0], [], row_data[1], [], row_3_data_edited, []]
-    #     for i, value in enumerate(row_data[0]):
-    #         data_used_lst[1].append(str(df[value].values[0]))
-    #     for i, value in enumerate(row_data[1]):
-    #         data_used_lst[3].append(str(df[value].values[0]))
-    #     for i, value in enumerate(row_data[2]):
-    #         data_used_lst[5].append(str(df[value].values[0]))
-    #
-    #     for row in data_used_lst:
-    #         items = [QStandardItem(str(item)) for item in row]
-    #         self.specific_well_data_model.appendRow(items)
-    #
-    #     self.ui.well_data_table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-    #     self.ui.well_data_table_view.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-    #     self.ui.well_data_table_view.horizontalHeader().setVisible(False)
-    #     self.ui.well_data_table_view.verticalHeader().setVisible(False)
-    #     self.ui.well_data_table_view.setModel(self.specific_well_data_model)
-    #
-    #     bold_rows = [0, 2, 4]  # The row you want to bold (0-indexed)
-    #     delegate = MultiBoldRowDelegate(bold_rows)
-    #     self.ui.well_data_table_view.setItemDelegate(delegate)
 
     def update2dSelectedWhenWellChanges(self) -> None:
         """
@@ -3480,43 +2447,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         # Refresh the 2D visualization model
         self.draw2dModelSelectedWell()
-
-
-    # def update2dSelectedWhenWellChanges(self):
-    #     self.update2dWhenDocketChanges()
-    #     self.draw2dModelSelectedWell()
-
-
-    # def comboUpdateWhenSelectedFromAllWellsTable(self, data):
-    #     """Filter based on API Number"""
-    #     filtered_df = self.currently_used_lines[self.currently_used_lines['APINumber'] == data[0]]
-    #     data_select_2d = filtered_df[['X', 'Y']].to_numpy().astype(float)
-    #     data_select_3d = filtered_df[['SPX', 'SPY', 'Targeted Elevation']].to_numpy().astype(float)
-    #
-    #     """Add wells to list"""
-    #     self.selected_well_2d_path = data_select_2d.tolist()
-    #     self.selected_well_3d_path = data_select_3d.tolist()
-    #
-    #     """Set the selected well, and change the combo box to match"""
-    #     self.targeted_well = data[0]
-    #     target_index = self.combo_box_data.index(self.targeted_well)
-    #     self.ui.well_lst_combobox.setCurrentIndex(target_index)
-    #
-    #     """Fill in the data rows"""
-    #     row_1_data = ['WellID', 'WellName', 'SideTrack', 'WorkType', 'Slant', 'APDReceivedDate', 'APDReturnDate', 'APDApprovedDate', 'APDExtDate', 'APDRescindDate', 'DrySpud', 'RotarySpud']
-    #     row_2_data = ['WCRCompletionDate', 'WellStatusReport', 'WellTypeReport', 'FirstProdDate', 'TestDate', 'ProductionMethod', 'OilRate', 'GasRate', 'WaterRate', 'DST', 'DirSurveyRun', 'CompletionType']
-    #     row_3_data = ['MD', 'TVD', 'Perforation MD', 'Perforation TVD', 'CurrentWellStatus', 'CurrentWellType', 'Total Gas Prod', 'Total Oil Prod', 'WellAge', 'Last Production (if Shut In)', 'Months Shut In']
-    #     all_columns = row_1_data + row_2_data + row_3_data
-    #     result_dict = {col: value for col, value in zip(all_columns, data)}
-    #     test_df = pd.DataFrame([result_dict])
-    #     # Parse and fill out the data rows
-    #     for i, value in enumerate(row_1_data):
-    #         self.ui.well_data_table_1.item(0, i).setText(str(test_df[value].item()))
-    #     for i, value in enumerate(row_2_data):
-    #         self.ui.well_data_table_2.item(0, i).setText(str(test_df[value].iloc[0]))
-    #     for i, value in enumerate(row_3_data):
-    #         self.ui.well_data_table_3.item(0, i).setText(str(test_df[value].iloc[0]))
-    #     self.update2dSelectedWhenWellChanges()
 
     def draw2dModelSelectedWell(self) -> None:
         """
@@ -3555,14 +2485,10 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             >>> self.draw2dModelSelectedWell()  # Updates visualizations for selected well
         """
         # Get well parameter data from current selection
-        df_well_data: pd.DataFrame = self.df_docket.loc[
-            self.dx_data['DisplayName'] == self.ui.well_lst_combobox.currentText()
-            ]
+        df_well_data: pd.DataFrame = self.df_docket.loc[self.dx_data['DisplayName'] == self.ui.well_lst_combobox.currentText()]
 
         # Filter directional survey data for selected well
-        df_well: pd.DataFrame = self.dx_df[
-            self.dx_df['APINumber'] == df_well_data['WellID'].iloc[0]
-            ]
+        df_well: pd.DataFrame = self.dx_df[self.dx_df['APINumber'] == df_well_data['WellID'].iloc[0]]
 
         # Separate data by citing type
         drilled_df: pd.DataFrame = df_well[df_well['CitingType'].isin(['asdrilled'])]
@@ -3616,63 +2542,8 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         self.canvas3d_solo.draw()
         self.drawProductionGraphic()
 
-    # def draw2dModelSelectedWell(self):
-    #     """Get the well's parameter data"""
-    #     df_well_data = self.df_docket.loc[self.dx_data['DisplayName'] == self.ui.well_lst_combobox.currentText()]
-    #
-    #     """Restrict down to the dx data for the specific well"""
-    #     df_well = self.dx_df[self.dx_df['APINumber'] == df_well_data['WellID'].iloc[0]]
-    #     """Differentiate between the citing types (generate seperate data frames)"""
-    #     drilled_df = df_well[df_well['CitingType'].isin(['asdrilled'])]
-    #     planned_df = df_well[df_well['CitingType'].isin(['planned'])]
-    #     vert_df = df_well[df_well['CitingType'].isin(['vertical'])]
-    #
-    #     """This will prioritize the data, making sure that *something* gets plotted, even if you're just trying to look at asDrilled data and this well doesn't have anything."""
-    #     df_well = self.findPopulatedDataframeForSelection(drilled_df, planned_df, vert_df)
-    #     df_well.drop_duplicates(keep='first', inplace=True)
-    #     df_well['X'] = df_well['X'].astype(float)
-    #     df_well['Y'] = df_well['Y'].astype(float)
-    #
-    #     """Isolate out the xy data into a list."""
-    #     xy_data = df_well[['X', 'Y']].values
-    #
-    #     """Setup the data for the vertical well data"""
-    #     if df_well['CitingType'].iloc[0] == 'vertical':
-    #         self.spec_vertical_wells_2d.set_offsets(xy_data)
-    #         self.spec_well_2d.set_data([], [])
-    #     else:
-    #         self.spec_vertical_wells_2d.set_offsets([None, None])
-    #         self.spec_well_2d.set_data(xy_data[:, 0], xy_data[:, 1])
-    #     x = to_numeric(df_well['SPX'], errors='coerce')
-    #     y = to_numeric(df_well['SPY'], errors='coerce')
-    #     z = to_numeric(df_well['Targeted Elevation'], errors='coerce')
-    #     self.centroid = (x.mean(), y.mean(), z.mean())
-    #     self.spec_well_3d.set_data(x, y)
-    #     self.spec_well_3d.set_3d_properties(z)
-    #
-    #     self.spec_well_3d_solo.set_data(x, y)
-    #     self.spec_well_3d_solo.set_3d_properties(z)
-    #
-    #     self.canvas2d.draw()
-    #     self.canvas3d.draw()
-    #
-    #     new_xlim = [self.centroid[0] - 8000, self.centroid[0] + 8000]
-    #     new_ylim = [self.centroid[1] - 8000, self.centroid[1] + 8000]
-    #     new_zlim = [self.centroid[2] - 8000, self.centroid[2] + 8000]
-    #
-    #     self.ax3d_solo.set_xlim3d(new_xlim)
-    #     self.ax3d_solo.set_ylim3d(new_ylim)
-    #     self.ax3d_solo.set_zlim3d(new_zlim)
-    #
-    #     self.canvas3d_solo.draw()
-    #     self.drawProductionGraphic()
-
     def findPopulatedDataframeForSelection(
-            self,
-            drilled_df: pd.DataFrame,
-            planned_df: pd.DataFrame,
-            vert_df: pd.DataFrame
-    ) -> pd.DataFrame:
+            self,drilled_df: pd.DataFrame, planned_df: pd.DataFrame, vert_df: pd.DataFrame) -> pd.DataFrame:
         """
         Prioritizes and returns the first non-empty DataFrame from the provided well data sources.
 
@@ -3709,17 +2580,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             return planned_df
         else:
             return vert_df
-
-
-    # def findPopulatedDataframeForSelection(self, drilled_df, planned_df, vert_df):
-    #     if not drilled_df.empty:
-    #         return drilled_df
-    #         # If the first is empty, check the second DataFrame
-    #     elif not planned_df.empty:
-    #         return planned_df
-    #         # If the first two are empty, default to the third DataFrame
-    #     else:
-    #         return vert_df
 
     def drawTSRPlat(self) -> None:
         """
@@ -3795,42 +2655,28 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
                 >>> result = fieldsTester1(field_data)
             """
             # Create point geometries from coordinates
-            df_field['geometry'] = df_field.apply(
-                lambda row: Point(row['Easting'], row['Northing']),
-                axis=1
-            )
+            df_field['geometry'] = df_field.apply(lambda row: Point(row['Easting'], row['Northing']), axis=1)
 
             # Extract and process relevant fields
             used_fields = df_field[['Conc', 'Easting', 'Northing', 'geometry']]
-            used_fields['geometry'] = used_fields.apply(
-                lambda row: Point(row['Easting'], row['Northing']),
-                axis=1
-            )
+            used_fields['geometry'] = used_fields.apply(lambda row: Point(row['Easting'], row['Northing']), axis=1)
 
             # Helper function to create polygons from coordinate groups
             def create_polygon(group: pd.DataFrame) -> Polygon:
                 return Polygon(zip(group['Easting'], group['Northing']))
 
             # Create polygons grouped by concentration
-            polygons = used_fields.groupby(
-                'Conc',
-                group_keys=False
-            ).apply(create_polygon, include_groups=False).reset_index()
+            polygons = used_fields.groupby('Conc',group_keys=False).apply(create_polygon, include_groups=False).reset_index()
 
             # Rename geometry column
             polygons = polygons.rename(columns={0: 'geometry'})
 
             # Merge point and polygon data
             merged_data = used_fields.merge(polygons, on='Conc')
-            merged_data = merged_data.drop('geometry_y', axis=1).rename(
-                columns={'geometry_x': 'geometry'}
-            )
+            merged_data = merged_data.drop('geometry_y', axis=1).rename(columns={'geometry_x': 'geometry'})
 
             # Create final polygon dataset
-            df_new = merged_data.groupby('Conc').apply(
-                lambda x: Polygon(zip(x['Easting'], x['Northing'])),
-                include_groups=False
-            ).reset_index()
+            df_new = merged_data.groupby('Conc').apply(lambda x: Polygon(zip(x['Easting'], x['Northing'])), include_groups=False).reset_index()
 
             # Set column names and add derived fields
             df_new.columns = ['Conc', 'geometry']
@@ -3919,12 +2765,8 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         # Get current board data and filter adjacent plats
         board_data = self.ui.board_matter_lst_combobox.currentText()
-        adjacent_all = self.df_adjacent_plats[
-            self.df_adjacent_plats['Board_Docket'] == board_data
-            ]
-        df_plat_docket = self.df_plat[
-            self.df_plat['Board_Docket'] == board_data
-            ]
+        adjacent_all = self.df_adjacent_plats[self.df_adjacent_plats['Board_Docket'] == board_data]
+        df_plat_docket = self.df_plat[self.df_plat['Board_Docket'] == board_data]
 
         # Filter adjacency orders
         adjacent_main = adjacent_all[adjacent_all['Order'] == 0]
@@ -3932,15 +2774,9 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         adjacent_2 = adjacent_all[adjacent_all['Order'] == 2]
 
         # Get plat data for each adjacency level
-        adjacent_main_plats = df_plat_docket[
-            df_plat_docket['Conc'].isin(adjacent_main['src_FullCo'].unique())
-        ]
-        adjacent_1_plats = df_plat_docket[
-            df_plat_docket['Conc'].isin(adjacent_1['src_FullCo'].unique())
-        ]
-        adjacent_2_plats = df_plat_docket[
-            df_plat_docket['Conc'].isin(adjacent_2['src_FullCo'].unique())
-        ]
+        adjacent_main_plats = df_plat_docket[df_plat_docket['Conc'].isin(adjacent_main['src_FullCo'].unique())]
+        adjacent_1_plats = df_plat_docket[df_plat_docket['Conc'].isin(adjacent_1['src_FullCo'].unique())]
+        adjacent_2_plats = df_plat_docket[df_plat_docket['Conc'].isin(adjacent_2['src_FullCo'].unique())]
 
         # Process geometry data
         plat_data_main = fieldsTester1(adjacent_main_plats)
@@ -4077,8 +2913,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         #     pass
         # pass
 
-    """This is going to manipulate and organize the data into new dataframes based on when the wells were drilled. This is used when the radio buttons are changed """
-
     def setupDataForBoardDrillingInformation(self):
         # Clear and prep the data
         self.df_docket_data = self.preprocessData(self.df_docket_data)
@@ -4167,10 +3001,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         return df
 
-    # def preprocessData(self, df):
-    #     df = df.drop_duplicates(keep='first').sort_values(by='APINumber').reset_index(drop=True)
-    #     df['WellAge'] = df['WellAge'].fillna(0)
-    #     return df
     def generateMasks(self) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """
         Generates boolean masks for filtering well data based on drilling status and type.
@@ -4216,11 +3046,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         return mask_drilled, mask_planned, mask_drilling
 
-    # def generateMasks(self):
-    #     mask_drilled = (self.df_docket_data['CitingType'].isin(['asdrilled', 'vertical']))
-    #     mask_planned = (self.df_docket_data['CitingType'].isin(['planned', 'vertical']))
-    #     mask_drilling = (self.df_docket_data['CurrentWellStatus'].isin(['Drilling']))
-    #     return mask_drilled, mask_planned, mask_drilling
     def createAgeMasks(self) -> List[pd.Series]:
         """
         Creates boolean masks for filtering wells based on age thresholds.
@@ -4264,13 +3089,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             (self.df_docket_data['WellAge'] <= 9999)  # All wells threshold
         ]
 
-    # def createAgeMasks(self):
-    #     return [
-    #         (self.df_docket_data['WellAge'] <= 12),
-    #         (self.df_docket_data['WellAge'] <= 60),
-    #         (self.df_docket_data['WellAge'] <= 120),
-    #         (self.df_docket_data['WellAge'] <= 9999)
-    #     ]
     def cleanData(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Cleans the input DataFrame by removing rows with missing targeted elevation values.
@@ -4309,38 +3127,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         # Remove rows with missing targeted elevation values
         return df.dropna(subset=['Targeted Elevation'])
 
-    # def generateDrilledDataframes(self, mask_drilled, age_masks):
-    #     drilled_df_year = self.df_docket_data.loc[mask_drilled & age_masks[0]].reset_index(drop=True).sort_values(
-    #         by=['APINumber', 'MeasuredDepth'])
-    #     drilled_df_5years = self.df_docket_data.loc[mask_drilled & age_masks[1]].reset_index(drop=True).sort_values(
-    #         by=['APINumber', 'MeasuredDepth'])
-    #     drilled_df_10years = self.df_docket_data.loc[mask_drilled & age_masks[2]].reset_index(drop=True).sort_values(
-    #         by=['APINumber', 'MeasuredDepth'])
-    #     drilled_df_all = self.df_docket_data.loc[mask_drilled & age_masks[3]].reset_index(drop=True).sort_values(
-    #         by=['APINumber', 'MeasuredDepth'])
-    #     return drilled_df_year, drilled_df_5years, drilled_df_10years, drilled_df_all
-    #
-    # def generatePlannedDataframes(self, mask_planned, age_masks):
-    #     planned_year = self.df_docket_data.loc[mask_planned & age_masks[0]].reset_index(drop=True).sort_values(
-    #         by=['APINumber', 'MeasuredDepth'])
-    #     planned_5years = self.df_docket_data.loc[mask_planned & age_masks[1]].reset_index(drop=True).sort_values(
-    #         by=['APINumber', 'MeasuredDepth'])
-    #     planned_10years = self.df_docket_data.loc[mask_planned & age_masks[2]].reset_index(drop=True).sort_values(
-    #         by=['APINumber', 'MeasuredDepth'])
-    #     planned_all = self.df_docket_data.loc[mask_planned & age_masks[3]].reset_index(drop=True).sort_values(
-    #         by=['APINumber', 'MeasuredDepth'])
-    #     return planned_year, planned_5years, planned_10years, planned_all
-    #
-    # def generateCurrentlyDrillingDataframes(self, mask_drilling, age_masks):
-    #     currently_drilling_year = self.df_docket_data.loc[mask_drilling & age_masks[0]].reset_index(
-    #         drop=True).sort_values(by=['APINumber', 'MeasuredDepth'])
-    #     currently_drilling_5years = self.df_docket_data.loc[mask_drilling & age_masks[1]].reset_index(
-    #         drop=True).sort_values(by=['APINumber', 'MeasuredDepth'])
-    #     currently_drilling_10years = self.df_docket_data.loc[mask_drilling & age_masks[2]].reset_index(
-    #         drop=True).sort_values(by=['APINumber', 'MeasuredDepth'])
-    #     currently_drilling_all = self.df_docket_data.loc[mask_drilling & age_masks[3]].reset_index(
-    #         drop=True).sort_values(by=['APINumber', 'MeasuredDepth'])
-    #     return currently_drilling_year, currently_drilling_5years, currently_drilling_10years, currently_drilling_all
     def generate_dataframes(
             self,
             mask_type: Literal['drilled', 'planned', 'drilling'],
@@ -4402,15 +3188,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         return dataframes
 
-    # def generate_dataframes(self, mask_type, mask, age_masks):
-    #     # Initialize dictionary for each type of age range (year, 5years, etc.)
-    #     dataframes = {}
-    #     for i, age_range in enumerate(['year', '5years', '10years', 'all']):
-    #         key = f"{mask_type}_{age_range}"
-    #         dataframes[key] = self.df_docket_data.loc[mask & age_masks[i]].reset_index(drop=True).sort_values(
-    #             by=['APINumber', 'MeasuredDepth']
-    #         )
-    #     return dataframes
     def filterPlannedData(
             self,
             drilled_dataframes: List[pd.DataFrame],
@@ -4467,12 +3244,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         return planned_year, planned_5years, planned_10years, planned_all
 
-    # def filterPlannedData(self, drilled_dataframes, planned_dataframes):
-    #     planned_year = self.filterPlannedDataForYear(drilled_dataframes[0], planned_dataframes[0])
-    #     planned_5years = self.filterPlannedDataForYear(drilled_dataframes[1], planned_dataframes[1])
-    #     planned_10years = self.filterPlannedDataForYear(drilled_dataframes[2], planned_dataframes[2])
-    #     planned_all = self.filterPlannedDataForYear(drilled_dataframes[3], planned_dataframes[3])
-    #     return planned_year, planned_5years, planned_10years, planned_all
     def filterPlannedDataForYear(
             self,
             drilled_df: pd.DataFrame,
@@ -4523,10 +3294,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         return planned_year
 
-    # def filterPlannedDataForYear(self, drilled_df, planned_df):
-    #     planned_year = planned_df[
-    #         ~planned_df['APINumber'].isin(drilled_df['APINumber']) & (planned_df['CurrentWellStatus'] != 'Drilling')]
-    #     return planned_year
     def prepareFinalData(
             self,
             drilled_dataframes: Dict[str, pd.DataFrame],
@@ -4571,15 +3338,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         self.processXYData(planned_dataframes, 'planned')  # Process planned wells XY data
         self.processXYData(currently_drilling_dataframes, 'currently_drilling')  # Process drilling wells XY data
 
-    # def prepareFinalData(self, drilled_dataframes, planned_dataframes, currently_drilling_dataframes):
-    #     self.drilled = drilled_dataframes
-    #     self.planned = planned_dataframes
-    #     self.currently_drilling = currently_drilling_dataframes
-    #
-    #     # Process XY data for each category
-    #     self.processXYData(drilled_dataframes, 'drilled')
-    #     self.processXYData(planned_dataframes, 'planned')
-    #     self.processXYData(currently_drilling_dataframes, 'currently_drilling')
     def processXYData(            self,            dataframes: Dict[str, pd.DataFrame],            data_type: Literal['drilled', 'planned', 'currently_drilling']    ) -> None:
         """
         Processes spatial (XY) coordinate data for each well dataframe in a category.
@@ -4683,18 +3441,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         getattr(self, xy_2d_key).append(xy_2d_data)
         getattr(self, xy_3d_key).append(xy_3d_data)
 
-    # def processSingleDataframe(self, df, data_type, index):
-    #     xy_points_dict = self.createXYPointsDict(df)
-    #     apinums = set(df['APINumber'])
-    #
-    #     xy_2d_key = f"{data_type}_xy_2d"
-    #     xy_3d_key = f"{data_type}_xy_3d"
-    #
-    #     xy_2d_data = [[r[:2] for r in v] for k, v in xy_points_dict.items() if k in apinums]
-    #     xy_3d_data = [[r[2:] for r in v] for k, v in xy_points_dict.items() if k in apinums]
-    #
-    #     getattr(self, xy_2d_key).append(xy_2d_data)
-    #     getattr(self, xy_3d_key).append(xy_3d_data)
     def createXYPointsDict(
             self,
             df: pd.DataFrame
@@ -4745,131 +3491,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
                     g['SPY'].astype(float),
                     g['Targeted Elevation'].astype(float))]
             for k, g in df.groupby('APINumber')}
-    # def createXYPointsDict(self, df):
-    #     return {k: [[x, y, spx, spy, z] for x, y, spx, spy, z in
-    #                 zip(g['X'].astype(float), g['Y'].astype(float), g['SPX'].astype(float), g['SPY'].astype(float),
-    #                     g['Targeted Elevation'].astype(float))] for k, g in df.groupby('APINumber')}
-
-
-    # def setupDataForBoardDrillingInformation(self):
-    #     def filterPlannedData(df1, df2):
-    #         planned_year = df2[~df2['APINumber'].isin(df1['APINumber']) & (df2['CurrentWellStatus'] != 'Drilling')]
-    #         return planned_year
-    #
-    #     # Clear and prep the data
-    #     self.df_docket_data = self.df_docket_data.drop_duplicates(keep='first').sort_values(by='APINumber').reset_index(drop=True)
-    #     self.df_docket_data['WellAge'] = self.df_docket_data['WellAge'].fillna(0)
-    #
-    #     self.planned_xy_2d, self.planned_xy_3d, self.drilled_xy_2d, self.drilled_xy_3d, self.currently_drilling_xy_2d, self.currently_drilling_xy_3d = [], [], [], [], [], []
-    #
-    #     # generate masks that will be used for filtering the data (based on drilled, planned, drilling, etc. Honestly, vertical isn't necessary
-    #
-    #     mask_drilled = (self.df_docket_data['CitingType'].isin(['asdrilled', 'vertical']))
-    #     mask_planned = (self.df_docket_data['CitingType'].isin(['planned', 'vertical']))
-    #     mask_drilling = (self.df_docket_data['CurrentWellStatus'].isin(['Drilling']))
-    #
-    #     # Generate masks on df_docket_data (which is docket data but also has directional surveys) based on the age in months
-    #     age_masks = [(self.df_docket_data['WellAge'] <= 12),
-    #                  (self.df_docket_data['WellAge'] <= 60),
-    #                  (self.df_docket_data['WellAge'] <= 120),
-    #                  (self.df_docket_data['WellAge'] <= 9999)]
-    #
-    #     # Remove any null data in targeted elevation
-    #     self.df_docket_data = self.df_docket_data.dropna(subset=['Targeted Elevation'])
-    #
-    #     # Using the two massks, generate 4x dataframes for each parameter that can then be referred back to.
-    #     drilled_df_year = self.df_docket_data.loc[mask_drilled & age_masks[0]].reset_index(drop=True).sort_values(by=['APINumber', 'MeasuredDepth'])
-    #     drilled_df_5years = self.df_docket_data.loc[mask_drilled & age_masks[1]].reset_index(drop=True).sort_values(by=['APINumber', 'MeasuredDepth'])
-    #     drilled_df_10years = self.df_docket_data.loc[mask_drilled & age_masks[2]].reset_index(drop=True).sort_values(by=['APINumber', 'MeasuredDepth'])
-    #     drilled_df_all = self.df_docket_data.loc[mask_drilled & age_masks[3]].reset_index(drop=True).sort_values(by=['APINumber', 'MeasuredDepth'])
-    #
-    #     planned_year = self.df_docket_data.loc[mask_planned & age_masks[0]].reset_index(drop=True).sort_values(by=['APINumber', 'MeasuredDepth'])
-    #     planned_5years = self.df_docket_data.loc[mask_planned & age_masks[1]].reset_index(drop=True).sort_values(by=['APINumber', 'MeasuredDepth'])
-    #     planned_10years = self.df_docket_data.loc[mask_planned & age_masks[2]].reset_index(drop=True).sort_values(by=['APINumber', 'MeasuredDepth'])
-    #     planned_all = self.df_docket_data.loc[mask_planned & age_masks[3]].reset_index(drop=True).sort_values(by=['APINumber', 'MeasuredDepth'])
-    #
-    #     # filter out data is currently being drilled.
-    #     planned_year = filterPlannedData(drilled_df_year, planned_year)
-    #     planned_5years = filterPlannedData(drilled_df_5years, planned_5years)
-    #     planned_10years = filterPlannedData(drilled_df_10years, planned_10years)
-    #     planned_all = filterPlannedData(drilled_df_all, planned_all)
-    #
-    #     currently_drilling_year = self.df_docket_data.loc[mask_drilling & age_masks[0]].reset_index(drop=True).sort_values(by=['APINumber', 'MeasuredDepth'])
-    #     currently_drilling_5years = self.df_docket_data.loc[mask_drilling & age_masks[1]].reset_index(drop=True).sort_values(by=['APINumber', 'MeasuredDepth'])
-    #     currently_drilling_10years = self.df_docket_data.loc[mask_drilling & age_masks[2]].reset_index(drop=True).sort_values(by=['APINumber', 'MeasuredDepth'])
-    #     currently_drilling_all = self.df_docket_data.loc[mask_drilling & age_masks[3]].reset_index(drop=True).sort_values(by=['APINumber', 'MeasuredDepth'])
-    #
-    #     # turn into tuples
-    #     self.drilled = (drilled_df_year, drilled_df_5years, drilled_df_10years, drilled_df_all)
-    #     self.planned = (planned_year, planned_5years, planned_10years, planned_all)
-    #     self.currently_drilling = (currently_drilling_year, currently_drilling_5years, currently_drilling_10years, currently_drilling_all)
-    #     out1 = drilled_df_all['APINumber'].unique().tolist()
-    #     out2 = planned_all['APINumber'].unique().tolist()
-    #     out3 = currently_drilling_all['APINumber'].unique().tolist()
-    #     full = out1 + out2 + out3
-    #
-    #     # just get rid of those vertical things
-    #     for i in range(4):
-    #         self.drilled[i]['CitingType'] = 'asdrilled'
-    #         self.planned[i]['CitingType'] = 'planned'
-    #
-    #     # create dictionaries of the data for further manipulationg
-    #     xy_points_dict_drilled = {k: [[x, y, spx, spy, z] for x, y, spx, spy, z in zip(g['X'].astype(float), g['Y'].astype(float), g['SPX'].astype(float), g['SPY'].astype(float), g['Targeted Elevation'].astype(float))] for k, g in drilled_df_all.groupby('APINumber')}
-    #     xy_points_dict_planned = {k: [[x, y, spx, spy, z] for x, y, spx, spy, z in zip(g['X'].astype(float), g['Y'].astype(float), g['SPX'].astype(float), g['SPY'].astype(float), g['Targeted Elevation'].astype(float))] for k, g in planned_all.groupby('APINumber')}
-    #     xy_points_dict_drilling = {k: [[x, y, spx, spy, z] for x, y, spx, spy, z in zip(g['X'].astype(float), g['Y'].astype(float), g['SPX'].astype(float), g['SPY'].astype(float), g['Targeted Elevation'].astype(float))] for k, g in currently_drilling_all.groupby('APINumber')}
-    #
-    #     # Get the api numbers for each column
-    #     drilled_apinums_year = set(self.drilled[0]['APINumber'])
-    #     drilled_apinums_5years = set(self.drilled[1]['APINumber'])
-    #     drilled_apinums_10years = set(self.drilled[2]['APINumber'])
-    #     drilled_apinums_all = set(self.drilled[3]['APINumber'])
-    #
-    #     planned_apinums_year = set(self.planned[0]['APINumber'])
-    #     planned_apinums_5years = set(self.planned[1]['APINumber'])
-    #     planned_apinums_10years = set(self.planned[2]['APINumber'])
-    #     planned_apinums_all = set(self.planned[3]['APINumber'])
-    #
-    #     drilling_apinums_year = set(self.currently_drilling[3]['APINumber'])
-    #     drilling_apinums_5years = set(self.currently_drilling[3]['APINumber'])
-    #     drilling_apinums_10years = set(self.currently_drilling[3]['APINumber'])
-    #     drilling_apinums_all = set(self.currently_drilling[3]['APINumber'])
-    #
-    #     # Assemble these into lists that are easier to call later (so when the radio button is clicked, it immediately knows what data to call)
-    #     self.drilled_xy_2d.append([[r[:2] for r in v] for k, v in xy_points_dict_drilled.items() if k in drilled_apinums_year])
-    #     self.drilled_xy_3d.append([[r[2:] for r in v] for k, v in xy_points_dict_drilled.items() if k in drilled_apinums_year])
-    #
-    #     self.drilled_xy_2d.append([[r[:2] for r in v] for k, v in xy_points_dict_drilled.items() if k in drilled_apinums_5years])
-    #     self.drilled_xy_3d.append([[r[2:] for r in v] for k, v in xy_points_dict_drilled.items() if k in drilled_apinums_5years])
-    #
-    #     self.drilled_xy_2d.append([[r[:2] for r in v] for k, v in xy_points_dict_drilled.items() if k in drilled_apinums_10years])
-    #     self.drilled_xy_3d.append([[r[2:] for r in v] for k, v in xy_points_dict_drilled.items() if k in drilled_apinums_10years])
-    #
-    #     self.drilled_xy_2d.append([[r[:2] for r in v] for k, v in xy_points_dict_drilled.items() if k in drilled_apinums_all])
-    #     self.drilled_xy_3d.append([[r[2:] for r in v] for k, v in xy_points_dict_drilled.items() if k in drilled_apinums_all])
-    #
-    #     self.planned_xy_2d.append([[r[:2] for r in v] for k, v in xy_points_dict_planned.items() if k in planned_apinums_year])
-    #     self.planned_xy_3d.append([[r[2:] for r in v] for k, v in xy_points_dict_planned.items() if k in planned_apinums_year])
-    #
-    #     self.planned_xy_2d.append([[r[:2] for r in v] for k, v in xy_points_dict_planned.items() if k in planned_apinums_5years])
-    #     self.planned_xy_3d.append([[r[2:] for r in v] for k, v in xy_points_dict_planned.items() if k in planned_apinums_5years])
-    #
-    #     self.planned_xy_2d.append([[r[:2] for r in v] for k, v in xy_points_dict_planned.items() if k in planned_apinums_10years])
-    #     self.planned_xy_3d.append([[r[2:] for r in v] for k, v in xy_points_dict_planned.items() if k in planned_apinums_10years])
-    #
-    #     self.planned_xy_2d.append([[r[:2] for r in v] for k, v in xy_points_dict_planned.items() if k in planned_apinums_all])
-    #     self.planned_xy_3d.append([[r[2:] for r in v] for k, v in xy_points_dict_planned.items() if k in planned_apinums_all])
-    #
-    #     self.currently_drilling_xy_2d.append([[r[:2] for r in v] for k, v in xy_points_dict_drilling.items() if k in drilling_apinums_year])
-    #     self.currently_drilling_xy_3d.append([[r[2:] for r in v] for k, v in xy_points_dict_drilling.items() if k in drilling_apinums_year])
-    #
-    #     self.currently_drilling_xy_2d.append([[r[:2] for r in v] for k, v in xy_points_dict_drilling.items() if k in drilling_apinums_5years])
-    #     self.currently_drilling_xy_3d.append([[r[2:] for r in v] for k, v in xy_points_dict_drilling.items() if k in drilling_apinums_5years])
-    #
-    #     self.currently_drilling_xy_2d.append([[r[:2] for r in v] for k, v in xy_points_dict_drilling.items() if k in drilling_apinums_10years])
-    #     self.currently_drilling_xy_3d.append([[r[2:] for r in v] for k, v in xy_points_dict_drilling.items() if k in drilling_apinums_10years])
-    #
-    #     self.currently_drilling_xy_2d.append([[r[:2] for r in v] for k, v in xy_points_dict_drilling.items() if k in drilling_apinums_all])
-    #     self.currently_drilling_xy_3d.append([[r[2:] for r in v] for k, v in xy_points_dict_drilling.items() if k in drilling_apinums_all])
 
     def returnWellDataDependingOnParametersTest(self) -> None:
         """
@@ -4930,121 +3551,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         self.drilled_segments_3d = self.drilled_xy_3d[id_1]
         self.planned_segments_3d = self.planned_xy_3d[id_1]
         self.currently_drilling_segments_3d = self.currently_drilling_xy_3d[id_1]
-    # def returnWellDataDependingOnParametersTest(self):
-    #     id_1 = self.ui.drilling_within_button_group.checkedId()
-    #     self.drilled_df = self.drilled[id_1]
-    #     self.planned_df = self.planned[id_1]
-    #     self.currently_drilling_df = self.currently_drilling[id_1]
-    #     self.drilled_segments = self.drilled_xy_2d[id_1]
-    #     self.drilled_segments_3d = self.drilled_xy_3d[id_1]
-    #     self.planned_segments = self.planned_xy_2d[id_1]
-    #     self.planned_segments_3d = self.planned_xy_3d[id_1]
-    #     self.currently_drilling_segments = self.currently_drilling_xy_2d[id_1]
-    #     self.currently_drilling_segments_3d = self.currently_drilling_xy_3d[id_1]
-    #     # self.manipulateTheDfDocketDataDependingOnCheckboxes()
-
-    """This is the main function that serves the biggest purpose. It looks at what check boxes are currently activated and manipulates the data accordingly."""
-
-
-    # def manipulateTheDfDocketDataDependingOnCheckboxes(self):
-    #     drilled_segments, planned_segments, currently_drilling_segments = (
-    #         self.drilled_segments,
-    #         self.planned_segments,
-    #         self.currently_drilling_segments,
-    #     )
-    #     drilled_segments_3d, planned_segments_3d, currently_drilling_segments_3d = (
-    #         self.drilled_segments_3d,
-    #         self.planned_segments_3d,
-    #         self.currently_drilling_segments_3d,
-    #     )
-    #     drilled_df, planned_df, currently_drilling_df = (
-    #         self.drilled_df,
-    #         self.planned_df,
-    #         self.currently_drilling_df,
-    #     )
-    #
-    #     # 1. Process API Numbers and filter segments
-    #     def platBounded(df, segments, segments_3d):
-    #         df = df.sort_values(by=['APINumber', 'MeasuredDepth'])
-    #         api = df[['APINumber']].drop_duplicates().reset_index(drop=True)
-    #         api['index'] = api.index
-    #         merged = pd.merge(api, df, on='APINumber')
-    #         segments = [segments[i] for i in merged['index'].unique()]
-    #         segments_3d = [segments_3d[i] for i in merged['index'].unique()]
-    #         return df, segments, segments_3d
-    #
-    #     drilled_df, drilled_segments, drilled_segments_3d = platBounded(
-    #         drilled_df, drilled_segments, drilled_segments_3d
-    #     )
-    #     planned_df, planned_segments, planned_segments_3d = platBounded(
-    #         planned_df, planned_segments, planned_segments_3d
-    #     )
-    #     currently_drilling_df, currently_drilling_segments, currently_drilling_segments_3d = platBounded(
-    #         currently_drilling_df, currently_drilling_segments, currently_drilling_segments_3d
-    #     )
-    #
-    #     # 2. Helper to restrict data by APINumber
-    #     def restrict_by_api(df):
-    #         return df.groupby('APINumber').first().reset_index()
-    #
-    #     drilled_df_restricted = restrict_by_api(drilled_df)
-    #     planned_df_restricted = restrict_by_api(planned_df)
-    #     currently_drilling_df_restricted = restrict_by_api(currently_drilling_df)
-    #
-    #     # 3. Update color and width based on masks
-    #     def update_color_and_width(mask, df, param_df, color_col, width=1.5):
-    #         param_df.loc[mask, 'color'] = df.loc[mask, color_col]
-    #         param_df.loc[mask, 'width'] = width
-    #
-    #     # 4. Apply well types and update visuals
-    #     def wellChecked(type, column, df, param_df, color_col):
-    #         mask = df[column] == type
-    #         update_color_and_width(mask, df, param_df, color_col)
-    #
-    #     def wellCheckedMultiple(types, column, df, param_df, color_col):
-    #         mask = df[column].isin(types)
-    #         update_color_and_width(mask, df, param_df, color_col)
-    #
-    #     # 5. Handle checkboxes for different well types
-    #     def apply_checkboxes_for_well_types():
-    #         if self.ui.oil_well_check.isChecked():
-    #             wellChecked('Oil Well', 'CurrentWellType', drilled_df_restricted, df_drilled_parameters,
-    #                         'WellTypeColor')
-    #         if self.ui.gas_well_check.isChecked():
-    #             wellChecked('Gas Well', 'CurrentWellType', planned_df_restricted, df_planned_parameters,
-    #                         'WellTypeColor')
-    #         if self.ui.water_disposal_check.isChecked():
-    #             wellCheckedMultiple(['Water Disposal Well', 'Oil Well/Water Disposal Well'], 'CurrentWellType',
-    #                                 currently_drilling_df_restricted, df_drilling_parameters, 'WellTypeColor')
-    #         # Add further checks similarly...
-    #
-    #     # 6. Set visibility of wells and draw models based on parameters
-    #     def set_visibility_and_draw(well_check, segments, colors, widths, is_visible):
-    #         if well_check.isChecked():
-    #             self.drawModelBasedOnParameters2d(self.all_wells_2d_asdrilled, segments, colors, widths, self.ax2d,
-    #                                               self.all_wells_2d_vertical_asdrilled)
-    #             self.drawModelBasedOnParameters(self.all_wells_3d_asdrilled, segments, colors, widths, self.ax3d)
-    #             self.all_wells_2d_asdrilled.set_visible(is_visible)
-    #             self.all_wells_3d_asdrilled.set_visible(is_visible)
-    #             self.all_wells_2d_vertical_asdrilled.set_visible(is_visible)
-    #         else:
-    #             self.all_wells_2d_asdrilled.set_visible(False)
-    #             self.all_wells_3d_asdrilled.set_visible(False)
-    #             self.all_wells_2d_vertical_asdrilled.set_visible(False)
-    #
-    #     # 7. Process each checkbox type and handle visibility
-    #     set_visibility_and_draw(self.ui.asdrilled_check, drilled_segments, drilled_colors_init, drilled_line_width,
-    #                             True)
-    #     set_visibility_and_draw(self.ui.planned_check, planned_segments, planned_colors_init, planned_line_width, True)
-    #     set_visibility_and_draw(self.ui.currently_drilling_check, currently_drilling_segments,
-    #                             currently_drilling_colors_init, currently_drilling_width, True)
-    #
-    #     # Update and redraw
-    #     self.canvas2d.blit(self.ax2d.bbox)
-    #     self.canvas2d.draw()
-    #     self.canvas3d.blit(self.ax3d.bbox)
-    #     self.canvas3d.draw()
-
 
     def manipulateTheDfDocketDataDependingOnCheckboxes(self):
         """
@@ -5912,8 +4418,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         # self.canvas3d.blit(self.ax3d.bbox)
         # self.canvas3d.draw()
 
-    """Generate a group of data based on the grouped xy data into line segments"""
-
     def returnSegmentsFromDF(self, df: pd.DataFrame) -> List[List[List[float]]]:
         """
         Converts well coordinate data from a DataFrame into nested segment lists.
@@ -5953,17 +4457,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         """
         return [[[float(x), float(y)] for x, y in zip(group['X'], group['Y'])]
                 for _, group in df.groupby('APINumber')]
-    # def returnSegmentsFromDF(self, df):
-    #     return [[[float(x), float(y)] for x, y in zip(group['X'], group['Y'])]  # Convert each x, y to float and store as list
-    #             for _, group in df.groupby('APINumber')]
-
-    """Draw model based on these parameters
-    lst = LineCollection previously defined in init
-    segments = segments as defined by the data that is filtered by well age in returnWellDataDependingOnParametersTest 
-    colors = colors defined previously
-    line_width = line_width defined previously
-    ax = ax2d, previously defined
-    scat_line = the scatter plots for vertical wells defined in init"""
 
     def drawModelBasedOnParameters2d(
             self,
@@ -6050,40 +4543,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         lst.set_colors(colors)
         lst.set_linewidth(line_width)
         ax.draw_artist(lst)
-    # def drawModelBasedOnParameters2d(self, lst, segments, colors, line_width, ax, scat_line):
-    #     colors_scatter = []
-    #     collapsed_points = []
-    #     try:
-    #         # get the index and the data
-    #         lst_vertical_indexes, lst_vertical_data = zip(*[(i, val) for i, val in enumerate(segments) if len(val) == 2])
-    #         # transform to a list of tuples
-    #         lst_vertical_data = [tuple(i[0]) for i in lst_vertical_data]
-    #         # get colors
-    #         data_color = [colors[i] for i in lst_vertical_indexes]
-    #         # set offsets and face colors
-    #         scat_line.set_offsets(lst_vertical_data)
-    #         scat_line.set_facecolor(data_color)
-    #     except ValueError:
-    #         scat_line.set_offsets([None, None])
-    #     # write it all to the graphic
-    #     if len(segments) == 0:
-    #         scat_line.set_offsets([None, None])
-    #     else:
-    #         for i in range(len(segments)):
-    #             if len(segments[i]) <= 2:
-    #                 used_colors = [colors[i]] * len(segments[i])
-    #                 colors_scatter.extend(used_colors)
-    #                 collapsed_points.extend(segments[i])
-    #         if len(collapsed_points) > 0:
-    #             scat_line.set_offsets(collapsed_points)
-    #
-    #     scat_line.set_facecolor(colors_scatter)
-    #     lst.set_segments(segments)
-    #     lst.set_colors(colors)
-    #     lst.set_linewidth(line_width)
-    #     ax.draw_artist(lst)
-
-    """Draws the model based on the parameters. This is the same as drawModelBasedOnParameters2d, but in 3d."""
 
     def drawModelBasedOnParameters(
             self,
@@ -6132,14 +4591,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         lst.set_colors(colors)
         lst.set_linewidth(line_width)
         ax.draw_artist(lst)
-    # def drawModelBasedOnParameters(self, lst, segments, colors, line_width, ax):
-    #     """Set the segments, the colors, the line width and then draw the artist."""
-    #     lst.set_segments(segments)
-    #     lst.set_colors(colors)
-    #     lst.set_linewidth(line_width)
-    #     ax.draw_artist(lst)
-
-    """When called, this will go into the self.df_docket dataframe, and add in well colors. This potentially could be done in Load_data2"""
 
     def generate_color_palette(self) -> List[QColor]:
         """
@@ -6220,49 +4671,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         # Convert hex colors to QColor objects
         return [QColor(color) for color in colors]
-    # def generate_color_palette(self):
-    #     # Color-blind friendly palette
-    #     colors = [
-    #         "#0072B2",  # Blue
-    #         "#E69F00",  # Orange
-    #         "#009E73",  # Green
-    #         "#CC79A7",  # Pink
-    #         "#56B4E9",  # Sky Blue
-    #         "#D55E00",  # Vermillion
-    #         "#660099",  # Purple
-    #         "#994F00",  # Brown
-    #         "#334B5C",  # Dark Slate
-    #         "#0000FF",  # Pure Blue
-    #         "#FF0000",  # Red
-    #         "#006600",  # Dark Green
-    #         "#FF00FF",  # Magenta
-    #         "#8B4513",  # Saddle Brown
-    #         "#800000",  # Maroon
-    #         "#808000",  # Olive
-    #         "#FF1493",  # Deep Pink
-    #         "#00CED1",  # Dark Turquoise
-    #         "#8B008B",  # Dark Magenta
-    #         "#556B2F",  # Dark Olive Green
-    #         "#FF8C00",  # Dark Orange
-    #         "#9932CC",  # Dark Orchid
-    #         "#8B0000",  # Dark Red
-    #         "#008080",  # Teal
-    #         "#4B0082",  # Indigo
-    #         "#B8860B",  # Dark Goldenrod
-    #         "#32CD32",  # Lime Green
-    #         "#800080",  # Purple
-    #         "#A0522D",  # Sienna
-    #         "#FF4500",  # Orange Red
-    #         "#00FF00",  # Lime
-    #         "#4682B4",  # Steel Blue
-    #         "#FFA500",  # Orange
-    #         "#DEB887",  # Burlywood
-    #         "#5F9EA0",  # Cadet Blue
-    #         "#D2691E",  # Chocolate
-    #         "#CD5C5C",  # Indian Red
-    #         "#708090",  # Slate Gray
-    #         "#000000"]  # Black
-    #     return [PyQt5.QtGui.QColor(color) for color in colors]
     def get_color_for_index(self, index: int) -> QColor:
         """
         Retrieves a color from the color palette using modulo indexing.
@@ -6289,8 +4697,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             >>> color = self.get_color_for_index(len(palette) + 2)  # Wraps to 3rd color
         """
         return self.color_palette[index % len(self.color_palette)]
-    # def get_color_for_index(self, index):
-    #     return self.color_palette[index % len(self.color_palette)]
 
     def createOwnershipLabels(self) -> None:
         """
@@ -6745,34 +5151,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         # Update visualization
         self.update_plot()
 
-    # def on_checkbox_state_changed(self, index, checkbox_text, state, color):
-    #     # Emit the custom signal
-    #     self.checkbox_state_changed.emit(index, checkbox_text, state == Qt.Checked, color)
-    #
-    #     # You can also handle the state change directly here if needed
-    #     self.update_plot()
-
-    # def get_checkbox_state(self, index):
-    #     if 0 <= index < len(self.operator_checkbox_list):
-    #         return self.operator_checkbox_list[index].isChecked()
-    #     return None
-
-    # def set_checkbox_state(self, index, state):
-    #     if 0 <= index < len(self.operator_checkbox_list):
-    #         self.operator_checkbox_list[index].setChecked(state)
-    #
-    # def get_checkbox_count(self):
-    #     return len(self.operator_checkbox_list)
-    #
-    # def get_checkbox_text(self, index):
-    #     if 0 <= index < len(self.operator_checkbox_list):
-    #         return self.operator_checkbox_list[index].text()
-    #     return None
-    #
-    # def get_checkbox_color(self, index):
-    #     if 0 <= index < len(self.operator_checkbox_list):
-    #         return self.get_color_for_index(index)
-    #     return None
     def update_plot(self) -> None:
         """
         Updates well path visibility in the 2D plot based on operator checkbox states.
@@ -6817,16 +5195,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         self.canvas2d.blit(self.ax2d.bbox)
         self.canvas2d.draw()
 
-    # def update_plot(self):
-    #     for index, checkbox in enumerate(self.operator_checkbox_list):
-    #         if checkbox.isChecked():
-    #             self.all_wells_2d_operators[index].set_visible(True)
-    #             self.all_wells_2d_operators_vertical[index].set_visible(True)
-    #         else:
-    #             self.all_wells_2d_operators[index].set_visible(False)
-    #             self.all_wells_2d_operators_vertical[index].set_visible(False)
-    #     self.canvas2d.blit(self.ax2d.bbox)
-    #     self.canvas2d.draw()
     def returnWellsWithParameters(self) -> DataFrame:
         """
         Processes and returns well data with color-coded parameters for visualization.
@@ -6929,51 +5297,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         )
 
         return final_df.sort_values(by=['APINumber', 'MeasuredDepth'])
-
-    # def returnWellsWithParameters(self):
-    #     # Dictionary mapping well types to colors
-    #     colors_type = {'Oil Well': '#c34c00',  # Red
-    #                    'Gas Well': '#f1aa00',  # Orange
-    #                    'Water Disposal Well': '#0032b0',  # Blue
-    #                    'Oil Well/Water Disposal Well': '#0032b0',  # Blue
-    #                    'Water Injection Well': '#93ebff',  # Cyan
-    #                    'Gas Injection Well': '#93ebff',  # Cyan
-    #                    'Dry Hole': '#4f494b',  # Dark Gray
-    #                    'Unknown': '#985bee',  # Magenta
-    #                    'Test Well': '#985bee',  # Magenta
-    #                    'Water Source Well': '#985bee'}  # Magenta
-    #
-    #     colors_status = {
-    #         'Producing': '#a2e361',  # Green
-    #         'Plugged & Abandoned': '#4c2d77',  # Purple
-    #         'Shut In': '#D2B48C',  # tan
-    #         'Drilling': '#001958',  # Navy
-    #         'Other': '#4a7583'  # Teal
-    #     }
-    #
-    #     necessary_columns = ['APINumber', 'X', 'Y', 'Targeted Elevation', 'CitingType', 'SPX', 'SPY',
-    #                          'CurrentWellType', 'CurrentWellStatus', 'WellAge', 'MeasuredDepth', 'ConcCode_y']
-    #     # Extract unique API numbers from docket DataFrame
-    #     apis = self.df_docket['WellID'].unique()
-    #     operators = self.df_docket['Operator'].unique()
-    #     # Isolate directional surveys based on present API Numbers
-    #     dx_filtered = self.dx_df[self.dx_df['APINumber'].isin(apis)]
-    #     # Filter self.df_docket to only items with directional surveys
-    #     docket_filtered = self.df_docket[self.df_docket['WellID'].isin(apis)]
-    #     # merge the dataframes so we have dataframes with the df_docket data, but also the directional surveys. The new dataframe will be large.
-    #     merged_df = pd.merge(dx_filtered, docket_filtered, left_on='APINumber', right_on='WellID')
-    #     # Manipulate the data, dropping duplicates, sorting, eliminating some columns, etc.
-    #     merged_df = merged_df.drop_duplicates(keep='first')
-    #     merged_df = merged_df.sort_values(by=['APINumber', 'MeasuredDepth'])
-    #     final_df = merged_df[necessary_columns]
-    #     final_df.reset_index(drop=True, inplace=True)
-    #     # create a new column based on current well type being mapped with colors.
-    #     final_df['WellTypeColor'] = final_df['CurrentWellType'].map(colors_type)
-    #     final_df['WellStatusColor'] = final_df['CurrentWellStatus'].apply(lambda x: colors_status.get(x, '#4a7583'))
-    #     final_df = final_df.sort_values(by=['APINumber', 'MeasuredDepth'])
-    #     return final_df
-
-    """This preps the township and range sections for graphing."""
 
     def draw2dModelSections(self) -> Tuple[List[List[List[float]]], List[str]]:
         """
@@ -7108,9 +5431,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         # plat_data = [[j[:2] for j in i] for i in plat_data]
         # return plat_data, plat_labels
 
-    # def retrievePlatDataRelevant(self):
-    #     pass
-
     def calculate_centroid_np(
             self,
             points: List[List[Union[float, int]]]
@@ -7154,13 +5474,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         return tuple(centroid), tuple(std_vals)
 
-    # def calculate_centroid_np(self, points):
-    #     # Flatten the list of lists and convert to a numpy array, then get a standard deviation array and the mean
-    #     flat_array = array([point for sublist in points for point in sublist])
-    #     std_vals = std(flat_array, axis=0)
-    #     centroid = flat_array.mean(axis=0)
-    #
-    #     return tuple(centroid), tuple(std_vals)
     def ownershipSelection(self) -> None:
         """
         Controls visibility of ownership section layers based on UI checkbox and radio button states.
@@ -7215,23 +5528,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         self.canvas2d.blit(self.ax2d.bbox)
         self.canvas2d.draw()
 
-
-    # def ownershipSelection(self):
-    #     if self.ui.ownership_checkbox.isChecked():
-    #         active_button_id = self.ui.ownership_button_group.checkedId()
-    #         if active_button_id == -2:
-    #             self.ownership_sections_agency.set_visible(False)
-    #             self.ownership_sections_owner.set_visible(True)
-    #         if active_button_id == -3:
-    #             self.ownership_sections_owner.set_visible(False)
-    #             self.ownership_sections_agency.set_visible(True)
-    #         # self.updateOwnershipCheckboxes()
-    #         self.createOwnershipLabels()
-    #     else:
-    #         self.ownership_sections_agency.set_visible(False)
-    #         self.ownership_sections_owner.set_visible(False)
-    #     self.canvas2d.blit(self.ax2d.bbox)
-    #     self.canvas2d.draw()
     def _update_oil_plots(self, current_data_row: pd.DataFrame) -> None:
         """
         Updates visualization plots for oil production data.
@@ -7305,6 +5601,7 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         self.profit_line_cum.set_label('Cumulative Gas Profit')
         self.prod_line.set_label('Monthly Gas Production')
         self.prod_line_cum.set_label('Cumulative Gas Production')
+
     def drawProductionGraphic(self) -> None:
         """
         Generates and updates production visualization graphs for oil and gas wells.
@@ -7404,103 +5701,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         for canvas in [self.canvas_prod_1, self.canvas_prod_2]:
             canvas.blit(canvas.figure.bbox)
             canvas.draw()
-    # def drawProductionGraphic(self):
-    #     def millions_formatter(x, pos):
-    #         """Formats the y-axis tick labels to display millions."""
-    #         if abs(x) >= 1e6:
-    #             return f"{x / 1e6:.1f}M"  # Format as millions with 1 decimal place
-    #         else:
-    #             return f"{x:.0f}"
-    #
-    #     # create a data frame that isolates out the production data just for the targeted well.
-    #     current_data_row = self.df_prod[self.df_prod['WellID'] == self.targeted_well]
-    #
-    #     # Sort the data by date
-    #     current_data_row = current_data_row.sort_values(by='Date')
-    #
-    #     # Drop unneeded columns that never seem to sum up write, drop duplicates, sort values, reset index, etc
-    #     current_data_row = current_data_row.drop('Potential Cumulative Gas Profit', axis=1).drop('Cumulative Potential Gas Production (mcf)', axis=1).drop('Cumulative Potential Oil Production (bbl)', axis=1).drop('Potential Cumulative Oil Profit', axis=1)
-    #     current_data_row.drop_duplicates(keep='first', inplace=True)
-    #     current_data_row = current_data_row.sort_values(by='Date')
-    #     current_data_row = current_data_row.reset_index(drop=True)
-    #
-    #     # Edit the date so that the hours/minutes/sections is removed.
-    #     current_data_row['Date'] = current_data_row['Date'].str.slice(0, 7).str.pad(7, side='right')
-    #
-    #     # create new cumsum rows. Because it only seems to work here for some reason.
-    #     current_data_row['Potential Cumulative Gas Profit'] = current_data_row['Potential Gas Profit'].cumsum()
-    #     current_data_row['Potential Cumulative Oil Profit'] = current_data_row['Potential Oil Profit'].cumsum()
-    #     current_data_row['Cumulative Potential Oil Production (bbl)'] = current_data_row['Oil Volume (bbl)'].cumsum()
-    #     current_data_row['Cumulative Potential Gas Production (mcf)'] = current_data_row['Gas Volume (mcf)'].cumsum()
-    #
-    #     # convert to a datatype data type
-    #     current_data_row['Date'] = pd.to_datetime(current_data_row['Date'])
-    #
-    #     # figure out what sort of production we're looking at. Oil or Gas?
-    #     active_button_id = self.ui.prod_button_group.checkedId()
-    #
-    #     # This is for formatting the tick marks depending on how much data there is. If there's too many data points, the axes labels get merged together. That's bad.
-    #     if len(current_data_row) > 10:
-    #         self.ax_prod_1.xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
-    #         self.ax_prod_2.xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
-    #         if active_button_id == -2:
-    #             self.current_prod = 'gas'
-    #         elif active_button_id == -3:
-    #             self.current_prod = 'oil'
-    #     if self.current_prod == 'oil':
-    #         self.ax_prod_1.set_title('Potential Profit')
-    #         self.ax_prod_2.set_title('Produced Oil (bbl)')
-    #         self.profit_line.set_data(current_data_row['Date'], current_data_row['Potential Oil Profit'])
-    #         self.profit_line_cum.set_data(current_data_row['Date'], current_data_row['Potential Cumulative Oil Profit'])
-    #         self.prod_line.set_data(current_data_row['Date'], current_data_row['Oil Volume (bbl)'])
-    #         self.prod_line_cum.set_data(current_data_row['Date'],
-    #                                     current_data_row['Cumulative Potential Oil Production (bbl)'])
-    #
-    #         # Update labels if needed
-    #         self.profit_line.set_label('Monthly Oil Profit')
-    #         self.profit_line_cum.set_label('Cumulative Oil Profit')
-    #         self.prod_line.set_label('Monthly Oil Production')
-    #         self.prod_line_cum.set_label('Cumulative Oil Production')
-    #
-    #     elif self.current_prod == 'gas':
-    #         self.ax_prod_1.set_title('Potential Profit')
-    #         self.ax_prod_2.set_title('Produced Gas Volume (mcf)')
-    #         self.profit_line.set_data(current_data_row['Date'], current_data_row['Potential Gas Profit'])
-    #         self.profit_line_cum.set_data(current_data_row['Date'], current_data_row['Potential Cumulative Gas Profit'])
-    #         self.prod_line.set_data(current_data_row['Date'], current_data_row['Gas Volume (mcf)'])
-    #         self.prod_line_cum.set_data(current_data_row['Date'],
-    #                                     current_data_row['Cumulative Potential Gas Production (mcf)'])
-    #
-    #         # Update labels if needed
-    #         self.profit_line.set_label('Monthly Gas Profit')
-    #         self.profit_line_cum.set_label('Cumulative Gas Profit')
-    #         self.prod_line.set_label('Monthly Gas Production')
-    #         self.prod_line_cum.set_label('Cumulative Gas Production')
-    #
-    #     self.ax_prod_1.xaxis.set_major_locator(mdates.YearLocator())
-    #     self.ax_prod_1.xaxis.set_minor_locator(mdates.MonthLocator())
-    #     self.ax_prod_1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-    #     self.ax_prod_2.xaxis.set_major_locator(mdates.YearLocator())
-    #     self.ax_prod_2.xaxis.set_minor_locator(mdates.MonthLocator())
-    #     self.ax_prod_2.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-    #
-    #     # Work on the views and stuff.
-    #     self.ax_prod_1.relim()
-    #     self.ax_prod_1.autoscale_view()
-    #     self.ax_prod_2.relim()
-    #     self.ax_prod_2.autoscale_view()
-    #     formatter = ScalarFormatter(useOffset=False)
-    #     formatter.set_scientific(False)
-    #     self.ax_prod_1.yaxis.set_major_formatter(FuncFormatter(millions_formatter))
-    #     self.ax_prod_1.legend(loc='upper left', bbox_to_anchor=(-0.15, -0.25))
-    #     self.ax_prod_2.legend(loc='upper left', bbox_to_anchor=(-0.15, -0.25))
-    #     # Blit, draw, etc
-    #     self.canvas_prod_1.blit(self.ax_prod_1.bbox)
-    #     self.canvas_prod_2.blit(self.ax_prod_2.bbox)
-    #     self.canvas_prod_1.draw()
-    #     self.canvas_prod_2.draw()
-    #
-    """This function is used to open the .db file and then process the found data accordingly, depteending on which tables and datasets are used."""
 
     def load_data2(self) -> None:
         """
@@ -7556,22 +5756,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         self.df_prod = read_sql('select * from Production', self.conn_db)
         self.df_prod.drop_duplicates(keep='first', inplace=True)
 
-
-    # def load_data2(self):
-    #     # Load the data for the oil and gas fields
-    #     self.df_field = read_sql('select * from Field', self.conn_db)
-    #     self.df_owner = read_sql('select * from Owner', self.conn_db)
-    #     self.loadDfFields()
-    #     self.loadBoardData()
-    #     self.loadPlatData()
-    #     dx_data_unique = self.loadDirectionalData()
-    #     self.loadWellData(dx_data_unique)
-    #
-    #     self.used_dockets = self.dx_data['Board_Docket'].unique()
-    #     self.used_years = self.dx_data['Board_Year'].unique()
-    #     self.df_prod = read_sql('select * from Production', self.conn_db)
-    #     self.df_prod.drop_duplicates(keep='first', inplace=True)
-
     def loadPlatData(self) -> None:
         """
         Loads and processes plat (land survey) data from database, converting geographic
@@ -7623,16 +5807,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             lambda row: Point(row['Easting'], row['Northing']),
             axis=1
         )
-
-    # def loadPlatData(self):
-    #     self.df_plat = read_sql('select * from PlatData', self.conn_db)
-    #     self.df_adjacent_plats = read_sql('select * from Adjacent', self.conn_db)
-    #     self.df_plat.drop_duplicates(keep='first', inplace=True)
-    #     self.df_plat = self.df_plat.dropna(subset=['Lat', 'Lon'])
-    #     # anywhere the condition is met, adjust the well age to 0
-    #
-    #     self.df_plat['Easting'], self.df_plat['Northing'] = zip(*self.df_plat.apply(lambda row: utm.from_latlon(row['Lat'], row['Lon'])[:2], axis=1))
-    #     self.df_plat['geometry'] = self.df_plat.apply(lambda row: Point(row['Easting'], row['Northing']), axis=1)
 
     def loadDfFields(self) -> None:
         """
@@ -7703,32 +5877,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         # Convert adjacency list to DataFrame
         self.df_adjacent_fields = pd.DataFrame(adjacent_fields)
 
-
-    # def loadDfFields(self):
-    #     adjacent_fields = []
-    #     # Generate a geometry column based on turning easting and northing into shapely points. This is used later for assembling pandas columns of LineStrings
-    #     self.df_field['geometry'] = self.df_field.apply(lambda row: Point(row['Easting'], row['Northing']), axis=1)
-    #
-    #     # Filter down to specific fields
-    #     used_fields = self.df_field[['Field_Name', 'Easting', 'Northing']]
-    #
-    #     # Create polygons for each field
-    #     polygons = used_fields.groupby('Field_Name').apply(lambda x: Polygon(zip(x['Easting'], x['Northing'])), include_groups=False).reset_index()
-    #
-    #
-    #     polygons.columns = ['Field_Name', 'geometry']
-    #     # Create GeoDataFrame
-    #     gdf = gpd.GeoDataFrame(polygons, geometry='geometry')
-    #     gdf['buffer'] = gdf['geometry'].buffer(10)  # create a buffer of 10 units for purposes of finding intersections
-    #
-    #     # Find adjacent fields
-    #     for _, row in gdf.iterrows():  # loop while ignoring the index
-    #         neighbors = gdf[gdf['buffer'].intersects(row['geometry'])]['Field_Name'].tolist()  # filter out only where neighbors exist.
-    #         neighbors.remove(row['Field_Name'])  # remove field name
-    #         adjacent_fields.extend([{'Field_Name': row['Field_Name'], 'adjacent_Field_Name': neighbor} for neighbor in neighbors])  # extent the data out in adjacent fields so we have a list of fields and adjacent fields
-    #
-    #     self.df_adjacent_fields = pd.DataFrame(adjacent_fields)  # turn it into a data frame.
-
     def loadBoardData(self) -> None:
         """
         Loads board data and links from database, adding concatenated location codes.
@@ -7767,16 +5915,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             'Sec', 'Township', 'TownshipDir',
             'Range', 'RangeDir', 'PM'
         ]].apply(lambda x: self.reTranslateData(x), axis=1)
-
-    # def loadBoardData(self):
-    #     self.df_BoardData = read_sql('select * from BoardData', self.conn_db)
-    #     self.df_BoardDataLinks = read_sql('select * from BoardDataLinks', self.conn_db)
-    #     # Add in the conc codes for tsr sections for ease of reference.
-    #     self.df_BoardData['Conc'] = self.df_BoardData[['Sec', 'Township', 'TownshipDir', 'Range', 'RangeDir', 'PM']].apply(lambda x: ma.reTranslateData(x), axis=1)
-    #
-    # """Load the directional data and then process it"""
-
-
 
     def loadDirectionalData(self) -> DataFrame:
         """
@@ -7875,67 +6013,6 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         dx_data_unique = self.dx_data.drop_duplicates(subset=['WellID'])
         return dx_data_unique
 
-
-    # def loadDirectionalData(self):
-    #     translated_fields = {'AAGARD RANCH': 'AAGARD RANCH FIELD', 'ANDERSON JUNCTION': 'ANDERSON JUNCTION FIELD', 'ANSCHUTZ RANCH WEBER': 'ANSCHUTZ RANCH (WEBER) FIELD', 'BAR X': 'BAR X FIELD', 'BIG FLAT': 'BIG FLAT FIELD', 'BIG FLAT WEST': 'BIG FLAT WEST FIELD', 'BIG INDIAN SOUTH': 'BIG INDIAN (SOUTH) FIELD', 'BONANZA': 'BONANZA FIELD', 'BOUNDARY BUTTE': 'BOUNDARY BUTTE FIELD', 'BRADFORD CYN': 'BRADFORD CANYON FIELD', 'BUZZARD BENCH': 'BUZZARD BENCH FIELD', 'CABALLO': 'CABALLO FIELD',
-    #                          'CACTUS PARK': 'CACTUS PARK FIELD', 'CHOKECHERRY CYN': 'CHOKECHERRY CANYON FIELD', 'CLAY HILL': 'CLAY HILL FIELD', 'CLEAR CREEK': 'CLEAR CREEK FIELD', 'DARK CANYON': 'DARK CANYON FIELD', 'DESERT CREEK': 'DESERT CREEK FIELD', 'ELKHORN': 'ELKHORN FIELD', 'FARNHAM DOME': 'FARNHAM DOME FIELD', 'FENCE CANYON': 'FENCE CANYON FIELD', 'GREATER CISCO': 'GREATER CISCO FIELD', 'HALFWAY HOLLOW': 'HALFWAY HOLLOW FIELD', 'HATCH POINT': 'HATCH POINT FIELD', 'HOGAN': 'HOGAN FIELD',
-    #                          'HOGBACK RIDGE': 'HOGBACK RIDGE FIELD', 'HORSEHEAD POINT': 'HORSEHEAD POINT FIELD', 'HORSESHOE BEND': 'HORSESHOE BEND FIELD', 'ICE CANYON (DK-MR)': 'ICE CANYON FIELD', 'LAKE CANYON': 'LAKE CANYON FIELD', 'LAST CHANCE': 'LAST CHANCE FIELD', 'LODGEPOLE': 'LODGEPOLE FIELD', 'MAIN CANYON': 'MAIN CANYON FIELD', 'MANCOS FLAT': 'MANCOS FLAT FIELD', 'MCELMO MESA': 'MCELMO MESA FIELD', 'NAVAJO CANYON': 'NAVAJO CANYON FIELD', 'NORTH MYTON BENCH': 'NORTH MYTON BENCH',
-    #                          'PARIETTE BENCH': 'PARIETTE BENCH FIELD', 'PARK ROAD': 'PARK ROAD FIELD', 'PETERS POINT': 'PETERS POINT FIELD', 'PETES WASH': 'PETES WASH FIELD', 'RABBIT EARS': 'RABBIT EARS FIELD', 'RANDLETT': 'RANDLETT FIELD', 'ROBIDOUX': 'ROBIDOUX FIELD', 'ROCK HOUSE': 'ROCK HOUSE FIELD', 'RUNWAY': 'RUNWAY FIELD', 'SEGUNDO CANYON': 'SEGUNDO CANYON FIELD', 'SOUTH PINE RIDGE': 'SOUTH PINE RIDGE FIELD', 'STRAWBERRY': 'STRAWBERRY FIELD', 'SWEET WATER RIDGE': 'SWEETWATER RIDGE FIELD',
-    #                          'TOHONADLA': 'TOHONADLA FIELD', 'UCOLO': 'UCOLO FIELD', 'UTELAND BUTTE': 'UTELAND BUTTE FIELD', 'WHITE MESA': 'WHITE MESA FIELD', 'WILD STALLION': 'WILD STALLION FIELD', 'WINDY RIDGE': 'WINDY RIDGE FIELD', 'WONSITS VALLEY': 'WONSITS VALLEY FIELD', 'WOODSIDE': 'WOODSIDE FIELD', '8 MILE FLAT NORTH': 'EIGHT MILE FLAT NORTH FIELD', 'AGENCY DRAW': 'AGENCY DRAW FIELD', 'ALKALI CANYON': 'ALKALI CANYON FIELD', 'ALTAMONT': 'ALTAMONT FIELD', 'ANETH': 'ANETH FIELD',
-    #                          'ANTELOPE CREEK': 'ANTELOPE CREEK FIELD', 'BIG VALLEY': 'BIG VALLEY FIELD', 'BLUEBELL': 'BLUEBELL FIELD', 'BLUFF': 'BLUFF FIELD', 'BLUFF BENCH': 'BLUFF BENCH FIELD', 'BRIDGELAND': 'BRIDGELAND FIELD', 'BRIDGER LAKE': 'BRIDGER LAKE FIELD', 'BRUNDAGE CANYON': 'BRUNDAGE CANYON FIELD', 'BUCK CANYON': 'BUCK CANYON FIELD', 'BUSHY': 'BUSHY FIELD', 'CEDAR CAMP': 'CEDAR CAMP FIELD', 'CHEROKEE': 'CHEROKEE FIELD', 'CHINLE WASH': 'CHINLE WASH FIELD',
-    #                          'CISCO DOME': 'CISCO DOME FIELD', 'CLAY BASIN': 'CLAY BASIN FIELD', 'CLEFT': 'CLEFT FIELD', 'CONE ROCK': 'CONE ROCK FIELD', 'COVENANT': 'COVENANT FIELD', 'COWBOY': 'COWBOY FIELD', 'DAVIS CANYON': 'DAVIS CANYON FIELD', 'DEAD MAN CANYON': 'DEADMAN CANYON FIELD', 'DEADMAN-ISMY': 'DEADMAN (ISMAY) FIELD', 'DELTA SALT CAVERN STORAGE': 'DELTA SALT CAVERN STORAGE FIELD', 'DEVILS PLAYGROUND': "DEVIL'S PLAYGROUND FIELD", 'DRY BURN': 'DRY BURN FIELD',
-    #                          'EAST CANYON': 'EAST CANYON FIELD', 'EVACUATION CREEK': 'EVACUATION CREEK FIELD', 'FARMINGTON': 'FARMINGTON FIELD', 'GRASSY TRAIL': 'GRASSY TRAIL FIELD', 'GRAYSON': 'GRAYSON FIELD', 'GUSHER': 'GUSHER FIELD', 'HATCH': 'HATCH FIELD', "HELL'S HOLE": "HELL'S HOLE FIELD", 'HELPER': 'HELPER FIELD', 'HORSE CANYON': 'HORSE CANYON FIELD', 'INDEPENDENCE': 'INDEPENDENCE FIELD', 'KACHINA': 'KACHINA FIELD', 'KICKER': 'KICKER FIELD', 'LIGHTNING DRAW': 'LIGHTNING DRAW FIELD',
-    #                          'LION MESA': 'LION MESA FIELD', 'LISBON': 'LISBON FIELD', 'MC CRACKEN SPRING': 'MCCRACKEN SPRING FIELD', 'MOAB GAS STORAGE': 'MOAB GAS STORAGE', 'MONUMENT': 'MONUMENT FIELD', 'MONUMENT BUTTE': 'MONUMENT BUTTE FIELD', 'MUSTANG FLAT': 'MUSTANG FLAT FIELD', 'NATURAL BUTTES': 'NATURAL BUTTES FIELD', 'NINE MILE CANYON': 'NINE MILE CANYON FIELD', 'NORTH BONANZA': 'NORTH BONANZA FIELD', 'PAIUTE KNOLL': 'PAIUTE KNOLL FIELD', 'PEAR PARK': 'PEAR PARK FIELD',
-    #                          'POWDER SPRINGS': 'POWDER SPRINGS FIELD', 'RAT HOLE CANYON': 'RAT HOLE CANYON FIELD', 'RECAPTURE CREEK': 'RECAPTURE CREEK FIELD', 'ROCKWELL FLAT': 'ROCKWELL FLAT FIELD', 'SAN ARROYO': 'SAN ARROYO FIELD', 'SEEP RIDGE': 'SEEP RIDGE FIELD', 'SHUMWAY POINT': 'SHUMWAY POINT FIELD', 'SODA SPRING': 'SODA SPRING FIELD', 'SOLDIER CREEK': 'SOLDIER CREEK FIELD', 'SOUTH ISMAY': 'SOUTH ISMAY FIELD', 'SOWERS CANYON': 'SOWER CANYON FIELD', 'STONE CABIN': 'STONE CABIN FIELD',
-    #                          'SWEETWATER CYN': 'SWEETWATER CANYON FIELD', 'TIN CUP MESA': 'TIN CUP MESA FIELD', 'TOWER': 'TOWER FIELD', 'TURNER BLUFF': 'TURNER BLUFF FIELD', 'VIRGIN': 'VIRGIN FIELD', 'WHITE RIVER': 'WHITE RIVER FIELD', 'WINTER CAMP': 'WINTER CAMP FIELD', 'ALGER PASS': 'ALGER PASS FIELD', 'ALKALI POINT': 'ALKALI POINT FIELD', 'ANIDO CREEK': 'ANIDO CREEK FIELD', 'ASPHALT WASH': 'ASPHALT WASH FIELD', 'ATCHEE RIDGE': 'ATCHEE RIDGE FIELD', 'BANNOCK': 'BANNOCK FIELD',
-    #                          'BIG SPRING': 'BIG SPRING FIELD', 'BITTER CREEK': 'BITTER CREEK FIELD', 'BLACK BULL': 'BLACK BULL FIELD', 'BLACK HORSE CYN': 'BLACK HORSE CANYON FIELD', 'BOOK CLIFFS': 'BOOK CLIFFS FIELD', 'BRENNAN BOTTOM': 'BRENNAN BOTTOM FIELD', 'BROKEN HILLS': 'BROKEN HILLS FIELD', 'BRONCO': 'BRONCO FIELD', 'BRYSON CANYON': 'BRYSON CANYON FIELD', 'CAJON LAKE': 'CAJON LAKE FIELD', 'CANE CREEK': 'KANE CREEK FIELD', 'CASA MESA': 'CASA MESA FIELD',
-    #                          'CHALK CREEK GAS STORAGE': 'CHALK CREEK GAS STORAGE', 'COTTONWOOD WASH': 'COTTONWOOD WASH FIELD', 'CROOKED CANYON': 'CROOKED CANYON FIELD', 'DUCHESNE': 'DUCHESNE FIELD', 'FLAT CANYON': 'FLAT CANYON FIELD', 'GATE CANYON': 'GATE CANYON FIELD', 'GORDON CREEK': 'GORDON CREEK FIELD', 'GOTHIC MESA': 'GOTHIC MESA FIELD', 'GYPSUM HILLS': 'GYPSUM HILLS FIELD', 'HELL ROARING': 'HELL ROARING FIELD', 'HERON': 'HERON FIELD', 'HILL CREEK': 'HILL CREEK FIELD',
-    #                          'HORSE POINT': 'HORSE POINT FIELD', "JOE'S VALLEY": "JOE'S VALLEY FIELD", 'KENNEDY WASH': 'KENNEDY WASH FIELD', 'LIGHTNING DRAW SE': 'LIGHTNING DRAW FIELD', 'LITTLE NANCY': 'LITTLE NANCY FIELD', 'LITTLE VALLEY': 'LITTLE VALLEY FIELD', 'LONE SPRING': 'LONE SPRING FIELD', 'LONG CANYON': 'LONG CANYON FIELD', 'MIDDLE BENCH': 'MIDDLE BENCH FIELD', 'MOON RIDGE': 'MOON RIDGE FIELD', 'NAVAL RESERVE': 'NAVAL RESERVE FIELD', 'PETERSON SPRING': 'PETERSON SPRINGS FIELD',
-    #                          'PLEASANT VALLEY': 'PLEASANT VALLEY FIELD', 'RED WASH': 'RED WASH FIELD', 'SALT WASH': 'SALT WASH FIELD', 'SCOFIELD': 'UCOLO FIELD', 'SHAFER CANYON': 'SHAFER CANYON FIELD', 'SOUTH CANYON': 'SOUTH CANYON FIELD', 'SOUTH MYTON BENCH': 'NORTH MYTON BENCH', 'SQUAW POINT': 'SQUAW POINT FIELD', 'WALKER HOLLOW': 'WALKER HOLLOW FIELD', 'WESTWATER': 'WESTWATER FIELD', 'WHITEBELLY WASH': 'WHITEBELLY WASH FIELD', 'YELLOW ROCK': 'YELLOW ROCK FIELD',
-    #                          'AGENCY DRAW WEST': 'AGENCY DRAW WEST FIELD', 'ANSCHUTZ RANCH': 'ANSCHUTZ RANCH FIELD', 'ANSCHUTZ RANCH EAST': 'ANSCHUTZ RANCH EAST FIELD', 'ASHLEY VALLEY': 'ASHLEY VALLEY FIELD', 'BIG INDIAN NORTH': 'BIG INDIAN (NORTH) FIELD', 'BLAZE CANYON': 'BLAZE CANYON FIELD', 'CAJON MESA': 'CAJON MESA FIELD', 'CASTLEGATE': 'CASTLEGATE FIELD', 'CAVE CANYON': 'CAVE CANYON FIELD', 'CAVE CREEK': 'CAVE CREEK FIELD', 'CEDAR RIM': 'CEDAR RIM FIELD',
-    #                          'COALVILLE GAS STORAGE': 'COALVILLE GAS STORAGE', 'COYOTE BASIN': 'COYOTE BASIN FIELD', 'DIAMOND RIDGE': 'DIAMOND RIDGE FIELD', 'DRUNKARDS WASH': 'DRUNKARDS WASH FIELD', 'EIGHT MILE FLAT': 'EIGHT MILE FLAT FIELD', 'FERRON': 'FERRON FIELD', 'FIRTH': 'FIRTH FIELD', 'FLAT ROCK': 'FLAT ROCK FIELD', 'GREATER ANETH': 'GREATER ANETH FIELD', 'GREENTOWN': 'GREENTOWN FIELD', 'INDIAN CANYON': 'INDIAN CANYON FIELD', 'ISMAY': 'ISMAY FIELD',
-    #                          'LEFT HAND CYN': 'LEFT HAND CANYON FIELD', 'LELAND BENCH': 'LELAND BENCH FIELD', 'MATHEWS': 'MATHEWS FIELD', 'MEXICAN HAT': 'MEXICAN HAT FIELD', 'MIDDLE CANYON (DKTA)': 'MIDDLE CANYON FIELD', 'MILLER CREEK': 'MILLER CREEK FIELD', 'MOFFAT CANAL': 'MOFFAT CANAL FIELD', 'NORTH PINEVIEW': 'NORTH PINEVIEW FIELD', 'OIL SPRINGS': 'OIL SPRINGS FIELD', 'PATTERSON CANYON': 'PATTERSON CANYON FIELD', 'PINE SPRINGS': 'PINE SPRINGS FIELD', 'PINEVIEW': 'PINEVIEW FIELD',
-    #                          'PROVIDENCE': 'PROVIDENCE FIELD', 'RECAPTURE POCKET': 'RECAPTURE POCKET FIELD', 'RIVER BANK': 'RIVER BANK FIELD', 'ROAD CANYON': 'ROAD CANYON FIELD', 'ROZEL POINT': 'ROZEL POINT FIELD', 'SEEP RIDGE B (DKTA)': 'SEEP RIDGE B FIELD', 'SQUAW CANYON': 'SQUAW CANYON FIELD', 'STARR FLAT': 'STARR FLAT FIELD', 'STATELINE': 'STATE LINE FIELD', 'TEN MILE': 'TEN MILE FIELD', 'THREE RIVERS': 'THREE RIVERS FIELD', 'UPPER VALLEY': 'UPPER VALLEY FIELD',
-    #                          'WEST WILLOW CREEK': 'WEST WILLOW CREEK FIELD', 'WHISKEY CREEK': 'WHISKEY CREEK FIELD', 'WILSON CANYON': 'WILSON CANYON FIELD', 'WOLF POINT': 'WOLF POINT FIELD', 'TABYAGO': 'TABYAGO CANYON FIELD', 'KIVA': 'KIVA FIELD', 'AKAH': 'AKAH FIELD', 'BUG': 'BUG FIELD', 'LOVE': 'LOVE FIELD', '12 MILE WASH': 'TWELVE MILE WASH FIELD'}
-    #
-    #     month_dict = {'January': 1, 'February': 2, 'March': 3, 'April': 4, 'May': 5,
-    #                   'June': 6, 'July': 7, 'August': 8, 'September': 9, 'October': 10,
-    #                   'November': 11, 'December': 12}
-    #     # Load the data
-    #     self.dx_data = read_sql('select * from WellInfo', self.conn_db)
-    #     self.dx_data = self.dx_data.rename(columns={'entityname': 'Operator'})
-    #     # Drop any plugged data and duplicates
-    #     self.dx_data = self.dx_data[self.dx_data['WorkType'] != 'PLUG']
-    #     self.dx_data.drop_duplicates(keep='first', inplace=True)
-    #     # Create a new column, display name, for displaying in the combo boxes
-    #     self.dx_data['DisplayName'] = self.dx_data['WellID'].astype(str) + ' - ' + self.dx_data['WellName'].astype(str)
-    #
-    #     # Convert to a datetime type and adjust accordingly for well age (in months)
-    #     self.dx_data['DrySpud'] = to_datetime(self.dx_data['DrySpud'])
-    #     self.dx_data['WellAge'] = (datetime.now().year - self.dx_data['DrySpud'].dt.year) * 12 + datetime.now().month - self.dx_data['DrySpud'].dt.month
-    #     self.dx_data['DrySpud'] = self.dx_data['DrySpud'].dt.strftime('%Y-%m-%d')
-    #
-    #     # Convert to a datetime type and adjust accordingly for well age (in months)
-    #
-    #     # Conditional for non-existant well age and approved permits (IE, stuff that is planned)
-    #     condition = pd.isna(self.dx_data['WellAge']) & (self.dx_data['CurrentWellStatus'] == 'Approved Permit')
-    #
-    #     # anywhere the condition is met, adjust the well age to 0
-    #     self.dx_data.loc[condition, 'WellAge'] = 0
-    #     # Add it to an actual month value (since I can't find any way to sort by months because I'm ignorant)
-    #     self.dx_data['month_order'] = self.dx_data['Docket_Month'].map(month_dict)
-    #
-    #     # Sort by the month order
-    #     df_sorted = self.dx_data.sort_values(by=['Board_Year', 'month_order'])
-    #
-    #     # Drop that column
-    #     self.dx_data = df_sorted.drop('month_order', axis=1)
-    #
-    #     # Add in the fieldname, adjusted for what the official AGRC data lists the field names at
-    #     self.dx_data['FieldName'] = self.dx_data['FieldName'].map(translated_fields)
-    #     dx_data_unique = self.dx_data.drop_duplicates(subset=['WellID'])
-    #     return dx_data_unique
-
     def loadWellData(self, dx_data_unique: DataFrame) -> None:
         """Loads and processes well directional survey data, merging it with unique well information
         and performing necessary coordinate and elevation calculations.
@@ -7999,27 +6076,7 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         # Create surface hole location DataFrame from first point of each well
         self.df_shl = self.dx_df.groupby('WellID').first().reset_index()
-    #
-    # def loadWellData(self, dx_data_unique):
-    #     self.dx_df = read_sql('select * from DX', self.conn_db)
-    #     self.dx_df.drop_duplicates(keep='first', inplace=True)
-    #     """Merge in the data for better analysis"""
-    #     self.dx_df = pd.merge(self.dx_df, dx_data_unique[['WellID', 'Elevation', 'FieldName', 'Mineral Lease', 'ConcCode']],
-    #                           how='left', left_on='APINumber', right_on='WellID')
-    #     self.dx_df['X'] = self.dx_df['X'].astype(float)
-    #     self.dx_df['Y'] = self.dx_df['Y'].astype(float)
-    #     """What we're doing here is converting to a true elevation compared to the elevation of the well. Namely, if the well is X ft deep, and the wellHead is at Y ft, what are they relative to each other?"""
-    #     self.dx_df['TrueElevation'] = self.dx_df['Elevation'] - to_numeric(self.dx_df['TrueVerticalDepth'], errors='coerce')
-    #     self.dx_df['MeasuredDepth'] = to_numeric(self.dx_df['MeasuredDepth'], errors='coerce')
-    #     self.dx_df['CitingType'] = self.dx_df['CitingType'].str.lower()
-    #     # This is done so that we can have linestrings for vertical wells (which effectively have one point in 2d)
-    #     self.dx_df.loc[self.dx_df['CitingType'] == 'vertical', 'Y'] += self.dx_df.groupby(['X', 'Y']).cumcount() * 1e-3
-    #     # State plane conversion. I don't think this ever gets used.
-    #     self.dx_df['SPX'] = self.dx_df['X'].astype(float) / 0.3048
-    #     self.dx_df['SPY'] = self.dx_df['Y'].astype(float) / 0.3048
-    #     self.dx_df = self.dx_df.sort_values(by=['WellID', 'MeasuredDepth'])
-    #     # get shl locations based on the first row of each wellid
-    #     self.df_shl = self.dx_df.groupby('WellID').first().reset_index()
+
     def reTranslateData(self, i):
         conc_code_merged = i[:6]
         conc_code_merged.iloc[2] = self.translateNumberToDirection('township', str(conc_code_merged.iloc[2])).upper()
