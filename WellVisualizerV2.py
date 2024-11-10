@@ -552,6 +552,7 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         apd_data_dir = os.path.join(os.getcwd(), 'Board_DB.db')
         self.conn_db = sqlite3.connect(apd_data_dir)
         self.cursor_db = self.conn_db.cursor()
+        self.ui.show_polygon_board_checkbox.setChecked(True)
 
         # Create SQLAlchemy engine
         self.engine = create_engine(f'sqlite:///{apd_data_dir}')
@@ -659,6 +660,8 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         """Run this process when the radio button for searching for board orders is clicked or changed"""
         self.ui.board_order_button_group.buttonClicked.connect(self.prodButtonsActivate)
 
+        """This will toggle the polygon for the board data"""
+        self.ui.show_polygon_board_checkbox.stateChanged.connect(self.checkboxMakeVisible)
         """Run this when the table in All Wells is clicked. It should then highlight the appropriate wells. Note, nothing will happen if no wells are displayed"""
         self.ui.all_wells_qtableview.clicked.connect(self.on_row_clicked)
 
