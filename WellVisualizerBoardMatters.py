@@ -40,11 +40,11 @@ Primary Methods:
     - setupBoardModel(): Configures data model for board matter display
     - prodButtonsActivate(): Manages search mode transitions
     - updateBoardMatterDetails(): Updates display with selected board matter data
-    - clear_board_matter_ui(): Resets UI state
-    - get_selected_cause_number(): Retrieves active cause number based on search mode
-    - get_board_matter_details(): Fetches comprehensive board matter information
-    - find_matching_rows(): Locates corresponding geographical data
-    - create_polygons(): Generates visualization polygons
+    - clearBoardMatterUI(): Resets UI state
+    - getSelectedCauseNumber(): Retrieves active cause number based on search mode
+    - getBoardMatterDetails(): Fetches comprehensive board matter information
+    - findMatchingRows(): Locates corresponding geographical data
+    - createPolygons(): Generates visualization polygons
 
 Note:
 This module is designed to be integrated into larger well visualization systems
@@ -208,19 +208,19 @@ class BoardMattersVisualizer:
         It also handles displaying the outlined board sections on the 2D plot. Activated through mattersBoardComboBox
         and board_matters_visible_combo
         """
-        self.clear_board_matter_ui()
-        selected_cause_number, active_button_id = self.get_selected_cause_number()
+        self.clearBoardMatterUI()
+        selected_cause_number, active_button_id = self.getSelectedCauseNumber()
 
-        quip, order_type, effect_date, end_data = self.get_board_matter_details(selected_cause_number, active_button_id)
-        all_plat_with_cause_numbers = self.get_plat_with_cause_number(selected_cause_number)
-        matched_rows = self.find_matching_rows(all_plat_with_cause_numbers)
-        found_polygons = self.create_polygons(matched_rows)
+        quip, order_type, effect_date, end_data = self.getBoardMatterDetails(selected_cause_number, active_button_id)
+        all_plat_with_cause_numbers = self.getPlatWithCauseNumber(selected_cause_number)
+        matched_rows = self.findMatchingRows(all_plat_with_cause_numbers)
+        found_polygons = self.createPolygons(matched_rows)
 
-        self.update_board_matter_ui(quip, order_type, effect_date, end_data, selected_cause_number)
-        formatted_files = self.format_board_matter_files(selected_cause_number)
+        self.updateBoardMatterUI(quip, order_type, effect_date, end_data, selected_cause_number)
+        formatted_files = self.formatBoardMatterFiles(selected_cause_number)
         self.ui.board_matter_files.setHtml(formatted_files)
 
-        self.update_plot_board(found_polygons)
+        self.updatePlotBoard(found_polygons)
 
     def updateBoardMatterDetails(self) -> None:
         """Updates and displays board matter details for selected cause number.
@@ -238,15 +238,15 @@ class BoardMattersVisualizer:
             6. Refreshes 2D plot with section outlines
 
         Dependencies:
-            - clear_board_matter_ui: Cleans UI state
-            - get_selected_cause_number: Returns (str, int) for cause number and mode
-            - get_board_matter_details: Returns tuple (quip, type, effect_date, end_date)
-            - get_plat_with_cause_number: Returns plat data for cause number
-            - find_matching_rows: Processes plat data into matching rows
-            - create_polygons: Converts row data into polygon objects
-            - update_board_matter_ui: Updates UI with matter details
-            - format_board_matter_files: Formats associated files as HTML
-            - update_plot_board: Updates 2D plot with polygons
+            - clearBoardMatterUI: Cleans UI state
+            - getSelectedCauseNumber: Returns (str, int) for cause number and mode
+            - getBoardMatterDetails: Returns tuple (quip, type, effect_date, end_date)
+            - getPlatWithCauseNumber: Returns plat data for cause number
+            - findMatchingRows: Processes plat data into matching rows
+            - createPolygons: Converts row data into polygon objects
+            - updateBoardMatterUI: Updates UI with matter details
+            - formatBoardMatterFiles: Formats associated files as HTML
+            - updatePlotBoard: Updates 2D plot with polygons
 
         UI Elements Modified:
             - board_matter_files (HTML content)
@@ -260,24 +260,24 @@ class BoardMattersVisualizer:
             - df_BoardDataLinks
         """
         # Reset UI state
-        self.clear_board_matter_ui()
-        selected_cause_number, active_button_id = self.get_selected_cause_number()
+        self.clearBoardMatterUI()
+        selected_cause_number, active_button_id = self.getSelectedCauseNumber()
 
         # Retrieve and process board matter data
-        quip, order_type, effect_date, end_data = self.get_board_matter_details(selected_cause_number, active_button_id)
-        all_plat_with_cause_numbers = self.get_plat_with_cause_number(selected_cause_number)
-        matched_rows = self.find_matching_rows(all_plat_with_cause_numbers)
-        found_polygons = self.create_polygons(matched_rows)
+        quip, order_type, effect_date, end_data = self.getBoardMatterDetails(selected_cause_number, active_button_id)
+        all_plat_with_cause_numbers = self.getPlatWithCauseNumber(selected_cause_number)
+        matched_rows = self.findMatchingRows(all_plat_with_cause_numbers)
+        found_polygons = self.createPolygons(matched_rows)
 
         # Update UI elements with retrieved data
-        self.update_board_matter_ui(quip, order_type, effect_date, end_data, selected_cause_number)
-        formatted_files = self.format_board_matter_files(selected_cause_number)
+        self.updateBoardMatterUI(quip, order_type, effect_date, end_data, selected_cause_number)
+        formatted_files = self.formatBoardMatterFiles(selected_cause_number)
         self.ui.board_matter_files.setHtml(formatted_files)
 
         # Update visual representation
-        self.update_plot_board(found_polygons)
+        self.updatePlotBoard(found_polygons)
 
-    def clear_board_matter_ui(self) -> None:
+    def clearBoardMatterUI(self) -> None:
         """Clears all board matter-related UI elements.
 
         Resets text and file display areas to empty state in preparation for
@@ -299,7 +299,7 @@ class BoardMattersVisualizer:
         self.ui.board_brief_text.clear()  # Clear brief text display
         self.ui.board_matter_files.clear()  # Clear matter files display
 
-    def get_selected_cause_number(self) -> tuple[str, int]:
+    def getSelectedCauseNumber(self) -> tuple[str, int]:
         """Retrieves the currently selected cause number and search mode.
 
         Gets the active search mode from the button group and extracts the appropriate
@@ -316,7 +316,7 @@ class BoardMattersVisualizer:
             - board_matters_visible_combo: Combo box for all matters search
 
         Dependencies:
-            - extract_cause_number_from_text: Helper method for parsing cause numbers
+            - extractCauseNumberFromText: Helper method for parsing cause numbers
             from formatted text strings
 
         Note:
@@ -331,12 +331,12 @@ class BoardMattersVisualizer:
         if active_button_id == 1:  # Section-based search
             selected_cause_number = self.ui.mattersBoardComboBox.currentText()
         elif active_button_id == 2:  # All matters search
-            selected_cause_number = self.extract_cause_number_from_text(
+            selected_cause_number = self.extractCauseNumberFromText(
                 self.ui.board_matters_visible_combo.currentText())
 
         return selected_cause_number, active_button_id
 
-    def extract_cause_number_from_text(self, text: str) -> str:
+    def extractCauseNumberFromText(self, text: str) -> str:
         """Extracts cause number from a formatted text string.
 
         Parses a text string containing 'Cause Number:' prefix and extracts the
@@ -353,7 +353,7 @@ class BoardMattersVisualizer:
 
         Example:
             >>> text = "Matter 123 - Cause Number:456-789"
-            >>> extract_cause_number_from_text(text)
+            >>> extractCauseNumberFromText(text)
             '456-789'
 
         Note:
@@ -365,7 +365,7 @@ class BoardMattersVisualizer:
         cause_number = text[cause_number_ind + len('Cause Number:'):]  # Extract number portion
         return cause_number
 
-    def get_board_matter_details(self, selected_cause_number: str, active_button_id: int) -> tuple[str, str, str, str]:
+    def getBoardMatterDetails(self, selected_cause_number: str, active_button_id: int) -> tuple[str, str, str, str]:
         """
         Retrieve the board matter details for the selected cause number.
 
@@ -399,7 +399,7 @@ class BoardMattersVisualizer:
 
         return quip, order_type, effect_date, end_data
 
-    def get_plat_with_cause_number(self, selected_cause_number: str) -> pd.DataFrame:
+    def getPlatWithCauseNumber(self, selected_cause_number: str) -> pd.DataFrame:
         """Retrieves plat data rows matching a specific cause number.
 
         Filters the master board data dataframe to get all plat records associated
@@ -424,7 +424,7 @@ class BoardMattersVisualizer:
             - df_BoardData: Master dataframe containing plat/section data
 
         Note:
-            - Result is used by find_matching_rows() to locate corresponding plat data
+            - Result is used by findMatchingRows() to locate corresponding plat data
             - Empty dataframe returned if no matches found
             - Maintains all columns from source dataframe
         """
@@ -432,7 +432,7 @@ class BoardMattersVisualizer:
         all_plat_with_cause_numbers = self.df_BoardData[self.df_BoardData['CauseNumber'] == selected_cause_number]
         return all_plat_with_cause_numbers
 
-    def find_matching_rows(self, all_plat_with_cause_numbers: pd.DataFrame) -> pd.DataFrame:
+    def findMatchingRows(self, all_plat_with_cause_numbers: pd.DataFrame) -> pd.DataFrame:
         """Finds plat records matching concession values from board matter data.
 
         Creates a regex pattern from concession numbers and filters the plat dataframe
@@ -475,7 +475,7 @@ class BoardMattersVisualizer:
         matching_rows = self.df_plat[self.df_plat['Conc'].astype(str).str.contains(pattern)]
         return matching_rows
 
-    def create_polygons(self, matching_rows: pd.DataFrame) -> list[np.ndarray]:
+    def createPolygons(self, matching_rows: pd.DataFrame) -> list[np.ndarray]:
         """Creates polygon coordinate arrays from plat/section coordinate data.
 
         Processes matched plat records to create polygon definitions by grouping
@@ -529,7 +529,7 @@ class BoardMattersVisualizer:
 
         return polygons_lst
 
-    def format_board_matter_files(self, selected_cause_number: str) -> str:
+    def formatBoardMatterFiles(self, selected_cause_number: str) -> str:
         """Formats board matter documents as HTML with clickable links.
 
         Creates an HTML-formatted string containing document descriptions and
@@ -559,7 +559,7 @@ class BoardMattersVisualizer:
                 - DocumentDate: Date for sorting
 
         Example:
-            >>> format_board_matter_files("ABC-123")
+            >>> formatBoardMatterFiles("ABC-123")
             'Document A<br><a href="/path/to/doc">path/to/doc</a><br><br>
              Document B<br><a href="/path/to/doc2">path/to/doc2</a><br><br>'
         """
@@ -580,7 +580,7 @@ class BoardMattersVisualizer:
         # Combine all entries into single HTML string
         return ''.join(file_entries)
 
-    def update_board_matter_ui(self, quip: str, order_type: str, effect_date: str, end_data: str,
+    def updateBoardMatterUI(self, quip: str, order_type: str, effect_date: str, end_data: str,
                                selected_cause_number: str) -> None:
         """Updates UI elements with board matter details.
 
@@ -627,7 +627,7 @@ class BoardMattersVisualizer:
         self.setupBoardModel(data)
 
     # self.well_planned.set_visible(False)
-    def update_plot_board(self, found_polygons: list[np.ndarray]) -> None:
+    def updatePlotBoard(self, found_polygons: list[np.ndarray]) -> None:
         """Updates the 2D plot visualization with board matter section polygons.
 
         Renders section polygons related to board matters on the 2D matplotlib plot.
@@ -705,118 +705,112 @@ class BoardMattersVisualizer:
         self.canvas2d.blit(self.ax2d.bbox)
         self.canvas2d.draw()
 
-    # def checkboxMakeVisible(self):
-    #     if self.ui.show_polygon_board_checkbox.isChecked():
-    #         self.outlined_board_sections.set_visible(True)
-    #     else:
-    #         self.outlined_board_sections.set_visible(False)
-    #     self.canvas2d.blit(self.ax2d.bbox)
-    #     self.canvas2d.draw()
-    def find_matching_rows(self, all_plat_with_cause_numbers: pd.DataFrame) -> pd.DataFrame:
-        """Finds plat records that match concession values from board matter data.
 
-        Searches the plat database for records matching concession numbers associated
-        with a specific board matter. Creates a regex pattern from the input concession
-        numbers to filter matching records.
+    # def findMatchingRows(self, all_plat_with_cause_numbers: pd.DataFrame) -> pd.DataFrame:
+    #     """Finds plat records that match concession values from board matter data.
+    #
+    #     Searches the plat database for records matching concession numbers associated
+    #     with a specific board matter. Creates a regex pattern from the input concession
+    #     numbers to filter matching records.
+    #
+    #     Args:
+    #         all_plat_with_cause_numbers: DataFrame containing board matter records with:
+    #             - CauseNumber: Board matter identifier
+    #             - Conc: Concession numbers to match (any data type, converted to str)
+    #
+    #     Returns:
+    #         pd.DataFrame: Filtered plat records containing matching Conc values.
+    #             Preserves all columns from df_plat for matching records.
+    #             Common columns include:
+    #             - Conc: Matching concession identifier
+    #             - Easting: X coordinate for plotting
+    #             - Northing: Y coordinate for plotting
+    #
+    #     Dependencies:
+    #         Requires initialized class attribute:
+    #         - df_plat: Master DataFrame containing plat/section records
+    #
+    #     Example:
+    #         Input DataFrame:
+    #             CauseNumber | Conc
+    #             ABC123     | 123
+    #             ABC123     | 456
+    #             ABC123     | 789
+    #
+    #         Creates pattern '123|456|789' to find all plat records where
+    #         'Conc' contains any of those values.
+    #
+    #     Notes:
+    #         - Uses string pattern matching, so partial matches are possible
+    #         - All Conc values are converted to strings before comparison
+    #         - No matching records returns empty DataFrame
+    #         - Used by createPolygons() to generate section outlines
+    #     """
+    #     # Create regex pattern from concession numbers
+    #     pattern = '|'.join(all_plat_with_cause_numbers['Conc'].astype(str))
+    #
+    #     # Filter plat records using pattern matching on Conc values
+    #     matching_rows = self.df_plat[self.df_plat['Conc'].astype(str).str.contains(pattern)]
+    #     return matching_rows
 
-        Args:
-            all_plat_with_cause_numbers: DataFrame containing board matter records with:
-                - CauseNumber: Board matter identifier
-                - Conc: Concession numbers to match (any data type, converted to str)
-
-        Returns:
-            pd.DataFrame: Filtered plat records containing matching Conc values.
-                Preserves all columns from df_plat for matching records.
-                Common columns include:
-                - Conc: Matching concession identifier
-                - Easting: X coordinate for plotting
-                - Northing: Y coordinate for plotting
-
-        Dependencies:
-            Requires initialized class attribute:
-            - df_plat: Master DataFrame containing plat/section records
-
-        Example:
-            Input DataFrame:
-                CauseNumber | Conc
-                ABC123     | 123
-                ABC123     | 456
-                ABC123     | 789
-
-            Creates pattern '123|456|789' to find all plat records where
-            'Conc' contains any of those values.
-
-        Notes:
-            - Uses string pattern matching, so partial matches are possible
-            - All Conc values are converted to strings before comparison
-            - No matching records returns empty DataFrame
-            - Used by create_polygons() to generate section outlines
-        """
-        # Create regex pattern from concession numbers
-        pattern = '|'.join(all_plat_with_cause_numbers['Conc'].astype(str))
-
-        # Filter plat records using pattern matching on Conc values
-        matching_rows = self.df_plat[self.df_plat['Conc'].astype(str).str.contains(pattern)]
-        return matching_rows
-
-    def create_polygons(self, matching_rows: pd.DataFrame) -> list[np.ndarray]:
-        """Creates ordered polygon coordinate arrays from matched plat data.
-
-        Processes matched plat records to generate polygon definitions for each unique
-        concession by grouping and ordering coordinate pairs. Handles data cleaning
-        and proper vertex ordering for polygon construction.
-
-        Args:
-            matching_rows: DataFrame containing plat records with columns:
-                - Conc: Concession/section identifier for grouping
-                - Easting: X-coordinate for polygon vertices
-                - Northing: Y-coordinate for polygon vertices
-
-        Returns:
-            list[np.ndarray]: List of polygon coordinate arrays where each array has
-                shape (n,2) containing ordered [Easting,Northing] vertex pairs.
-                The arrays define closed polygons representing section boundaries.
-
-        Process Flow:
-            1. Orders vertices within each concession group
-            2. Removes duplicate coordinate points
-            3. Groups by concession ID
-            4. Extracts coordinate pairs to numpy arrays
-
-        Example:
-            Input DataFrame:
-                Conc | Easting | Northing
-                A1   | 100     | 200
-                A1   | 150     | 250
-                B2   | 300     | 400
-
-            Returns:
-                [array([[100,200], [150,250]]),  # Polygon A1
-                 array([[300,400]])]             # Polygon B2
-
-        Notes:
-            - Vertex order is preserved using LineSegmentOrder
-            - Duplicate points are removed to avoid invalid polygons
-            - Each numpy array represents a single closed polygon
-            - Used for section boundary visualization on maps
-            - Coordinate pairs are in projected coordinate system units
-        """
-        # Create ordered vertex sequence for each concession
-        matching_rows['LineSegmentOrder'] = matching_rows.groupby('Conc').cumcount() + 1
-
-        # Remove duplicate coordinate points while preserving order
-        matching_rows = matching_rows.drop_duplicates(keep='first')
-
-        # Group coordinate data by concession ID
-        grouped_rows = matching_rows.groupby('Conc')
-
-        # Generate polygon arrays for each concession group
-        polygons_lst = []
-        for conc, group in grouped_rows:
-            coordinates = group[['Easting', 'Northing']].values.tolist()
-            polygons_lst.append(np.array(coordinates))
-
-        return polygons_lst
+    # def createPolygons(self, matching_rows: pd.DataFrame) -> list[np.ndarray]:
+    #     """Creates ordered polygon coordinate arrays from matched plat data.
+    #
+    #     Processes matched plat records to generate polygon definitions for each unique
+    #     concession by grouping and ordering coordinate pairs. Handles data cleaning
+    #     and proper vertex ordering for polygon construction.
+    #
+    #     Args:
+    #         matching_rows: DataFrame containing plat records with columns:
+    #             - Conc: Concession/section identifier for grouping
+    #             - Easting: X-coordinate for polygon vertices
+    #             - Northing: Y-coordinate for polygon vertices
+    #
+    #     Returns:
+    #         list[np.ndarray]: List of polygon coordinate arrays where each array has
+    #             shape (n,2) containing ordered [Easting,Northing] vertex pairs.
+    #             The arrays define closed polygons representing section boundaries.
+    #
+    #     Process Flow:
+    #         1. Orders vertices within each concession group
+    #         2. Removes duplicate coordinate points
+    #         3. Groups by concession ID
+    #         4. Extracts coordinate pairs to numpy arrays
+    #
+    #     Example:
+    #         Input DataFrame:
+    #             Conc | Easting | Northing
+    #             A1   | 100     | 200
+    #             A1   | 150     | 250
+    #             B2   | 300     | 400
+    #
+    #         Returns:
+    #             [array([[100,200], [150,250]]),  # Polygon A1
+    #              array([[300,400]])]             # Polygon B2
+    #
+    #     Notes:
+    #         - Vertex order is preserved using LineSegmentOrder
+    #         - Duplicate points are removed to avoid invalid polygons
+    #         - Each numpy array represents a single closed polygon
+    #         - Used for section boundary visualization on maps
+    #         - Coordinate pairs are in projected coordinate system units
+    #     """
+    #     # Create ordered vertex sequence for each concession
+    #     matching_rows['LineSegmentOrder'] = matching_rows.groupby('Conc').cumcount() + 1
+    #
+    #     # Remove duplicate coordinate points while preserving order
+    #     matching_rows = matching_rows.drop_duplicates(keep='first')
+    #
+    #     # Group coordinate data by concession ID
+    #     grouped_rows = matching_rows.groupby('Conc')
+    #
+    #     # Generate polygon arrays for each concession group
+    #     polygons_lst = []
+    #     for conc, group in grouped_rows:
+    #         coordinates = group[['Easting', 'Northing']].values.tolist()
+    #         polygons_lst.append(np.array(coordinates))
+    #
+    #     return polygons_lst
 
     def getTSRDataframe(self) -> pd.DataFrame:
         """Creates a structured DataFrame containing Theoretical Stratigraphic Record (TSR) information.
