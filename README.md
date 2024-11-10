@@ -1,5 +1,6 @@
 # OGMBoardProject
- OGM Board Data
+ OGM Board Data - Well Visualizer is a sophisticated Python application for visualizing and analyzing well data, particularly focused on oil and gas wells. It provides an interactive interface for displaying well locations, trajectories, and associated data in both 2D and 3D views.
+
 # Well Visualizer
 
 ## Description
