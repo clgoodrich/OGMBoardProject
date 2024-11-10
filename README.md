@@ -90,6 +90,10 @@ Well Visualizer is a sophisticated Python application for visualizing and analyz
 - Production Data
 - Board Matter Highlights
 
+###Outside Code Imports
+Zoom function: https://stackoverflow.com/questions/11551049/matplotlib-plot-zooming-with-scroll-wheel
+
+
 ## Authors
 - Colton Goodrich
 
