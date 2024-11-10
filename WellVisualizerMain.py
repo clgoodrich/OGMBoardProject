@@ -1,114 +1,58 @@
 """
-WellVisualizerV2
+WellVisualizerMain.py
 Author: Colton Goodrich
-Date: 8/31/2024
-
+Date: 11/10/2024
+Python Version: 3.12
 This module is a PyQt5 application that provides a graphical user interface (GUI) for
 visualizing and analyzing well data, board matters, and related information from the
 State of Utah, Division of Oil, Gas, and Mining.
 
 The application features various functionalities, including:
 
-- Displaying well data, such as location, status, production, and directional surveys,
-  on 2D and 3D plots.
-- Visualizing board matters, including sections, townships, and ranges, with the ability
-  to highlight specific areas and view associated information.
-- Rendering oil and gas field boundaries, along with field names.
-- Generating production charts for selected wells, showing potential profit and
-  cumulative production over time.
-- Filtering and displaying wells based on various criteria, such as age, well type,
-  status, and board docket information.
-- Providing a tabular view of well data and allowing selection of individual wells
-  for detailed analysis.
-
-The module utilizes PyQt5 for the graphical user interface, along with libraries like
-Matplotlib for plotting, Pandas for data manipulation, and various other dependencies
-for geospatial data processing, database connectivity, and utility functions.
+- Interactive visualization of well trajectories in both 2D and 3D views, including
+  planned, currently drilling, and completed wells
+- Real-time well path visualization with different line styles for different well states
+  (planned: dashed, drilling: solid, completed: solid)
+- Advanced filtering system for wells based on type (oil, gas, water disposal, dry hole,
+  injection) and status (shut-in, PA, producing, drilling)
+- Mineral ownership visualization with section-level detail and agency tracking
+- Dynamic operator filtering system with color-coded checkboxes and scrollable interfaces
+- Production data visualization with cumulative and time-series analysis
+- Field boundary and plat code visualization with centroid labeling
+- Interactive well selection system with detailed data display
+- Customizable visualization features including zoom, pan, and scale adjustment
 
 Classes:
-- wellVisualizationProcess: The main class that inherits from QMainWindow and
-  BoardMattersVisualizer. It handles the application's setup, data loading, GUI
-  interactions, and visualization functionalities.
-- ZoomPan: A utility class for enabling zoom and pan functionality on the plots.
-- MultiBoldRowDelegate and BoldDelegate: Custom delegates for rendering bold text
-  in specific rows or cells of the GUI tables.
+- MultiBoldRowDelegate: A custom delegate for applying bold formatting to specific rows
+  in Qt views, particularly useful for emphasizing important wells
+- BoldDelegate: A custom delegate for applying bold formatting to specific values in
+  Qt views
+- wellVisualizationProcess: The main application class that inherits from QMainWindow
+  and BoardMattersVisualizer, handling all core functionality
 
-Functions:
-The module contains numerous functions for various tasks, such as data loading, processing,
-filtering, plotting, and event handling. Some notable functions include:
+Key Components:
+- Data Management: Utilizes Pandas, GeoPandas, and SQLite for efficient data handling
+- Visualization: Combines Matplotlib with PyQt5 for interactive plotting
+- Geospatial Processing: Integrates UTM and Shapely for coordinate transformations
+  and geometric operations
+- User Interface: Custom-designed PyQt5 interface with scrollable areas and
+  dynamic updates
 
-- setupTables(): Sets up the tables in the GUI.
-- zoom(): Handles zooming functionality on the 3D plot.
-- comboBoxSetupYear(): Initializes the year combo box in the GUI.
-- comboBoxSetupMonthWhenYearChanges(): Updates the month combo box based on the selected year.
-- comboBoxSetupBoardWhenMonthChanges(): Updates the board matter combo box based on the
-  selected month.
-- comboBoxSetupWellsWhenDocketChanges(): Updates the well combo box based on the selected
-  board docket.
-- comboUpdateWhenWellChanges(): Updates the GUI with well-specific information based on
-  the selected well.
-- drawTSRPlat(): Renders the township, section, and range (TSR) plat on the 2D plot.
-- manipulateTheDfDocketDataDependingOnCheckboxes(): Filters and updates the well data
-  based on the selected checkboxes (e.g., well type, status).
-- drawProductionGraphic(): Generates the production chart for the selected well.
-- load_data2(): Loads and processes the initial data from the database.
+The module serves as a comprehensive tool for analyzing and visualizing well data,
+providing detailed insights into well operations, ownership, and regulatory matters
+for the State of Utah's Division of Oil, Gas, and Mining operations.
 
-The module serves as the main entry point for the well visualization application, providing
-a comprehensive interface for exploring and analyzing well data, board matters, and
-related information from the State of Utah, Division of Oil, Gas, and Mining.
+Dependencies:
+- Core Scientific: numpy, pandas, geopandas
+- GUI Framework: PyQt5
+- Visualization: matplotlib
+- Geospatial: shapely, utm
+- Database: sqlite3, sqlalchemy
+- Utility: regex
+
+Note: This application requires specific data structures and database connectivity
+to function properly. See accompanying documentation for setup requirements.
 """
-
-# from PyQt5.QtCore import QAbstractItemModel, QModelIndex, Qt
-# from PyQt5.QtGui import QColor, QStandardItem, QStandardItemModel
-#
-# from pandas import DataFrame
-# from PyQt5.QtWidgets import QLabel, QLayout, QTableWidget, QTableWidgetItem, QWidget, QVBoxLayout, QHBoxLayout, QCheckBox, QScrollArea
-#
-# from matplotlib.lines import Line2D
-# from typing import NoReturn, Union, Optional, Set, Literal, Dict
-#
-# from shapely.ops import unary_union
-# from sqlalchemy import create_engine
-# from matplotlib.patches import Polygon
-# from shapely.geometry import Point
-# from matplotlib.collections import PatchCollection
-# import itertools
-# import regex as re
-# import matplotlib.dates as mdates
-# from PyQt5.QtCore import QModelIndex, Qt
-# from matplotlib.textpath import TextPath
-# from matplotlib.patches import PathPatch
-# from WellVisualizerBoardMatters import BoardMattersVisualizer
-# import pandas as pd
-# import numpy as np
-# import geopandas as gpd
-# from shapely.geometry import Polygon
-# from matplotlib.ticker import ScalarFormatter, FuncFormatter
-# from mpl_toolkits.mplot3d.art3d import Line3DCollection
-# from matplotlib.collections import LineCollection, PolyCollection
-# import matplotlib.pyplot as plt
-# from numpy import array, std
-# from pandas import to_numeric, read_sql, set_option, concat, to_datetime, options
-# import utm
-# import sqlite3
-# from PyQt5.QtWidgets import QMainWindow, QApplication, QStyledItemDelegate, QHeaderView
-# from datetime import datetime
-# import ModuleAgnostic as ma
-# from WellVisualizationV2 import Ui_Dialog
-# import os
-# from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-# from PyQt5.QtGui import QStandardItemModel, QStandardItem
-# from shapely import wkt
-# from PyQt5.QtWidgets import QGraphicsDropShadowEffect
-# from PyQt5.QtGui import QColor
-# from PyQt5.QtCore import Qt
-# from typing import Optional, List, Tuple, Callable
-# from matplotlib.axes import Axes
-# from matplotlib.figure import Figure
-# from matplotlib.text import Text
-# from matplotlib.backend_bases import MouseEvent
-
-
 
 # Python standard library imports
 import itertools
@@ -163,7 +107,7 @@ import regex as re
 # Local application imports
 import ModuleAgnostic as ma
 from WellVisualizerBoardMatters import BoardMattersVisualizer
-from WellVisualizationV2 import Ui_Dialog
+from WellVisualizationUI import Ui_Dialog
 
 
 """Function and class designed for creating bold values in the self.ui.well_lst_combobox, specifically bolding wells of importance."""
@@ -272,7 +216,6 @@ class BoldDelegate(QStyledItemDelegate):
 
             # Step 5: Apply the modified font to the option
             option.font = font
-
 
 class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
     checkbox_state_changed = PyQt5.QtCore.pyqtSignal(int, str, bool, PyQt5.QtGui.QColor)

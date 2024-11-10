@@ -35,7 +35,7 @@ import sqlite3
 from PyQt5.QtWidgets import QMainWindow, QApplication, QStyledItemDelegate, QHeaderView
 from datetime import datetime
 import ModuleAgnostic as ma
-from WellVisualizationV2 import Ui_Dialog
+from WellVisualizationUI import Ui_Dialog
 import os
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5.QtGui import QStandardItemModel, QStandardItem

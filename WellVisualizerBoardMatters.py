@@ -1,48 +1,63 @@
 """
 WellVisualizerBoardMatters
 Author: Colton Goodrich
-Date: 8/31/2024
+Date: 11/09/2024
+Python Version: 3.12
 
-This module defines the BoardMattersVisualizer class, which handles the board matter-related functionality
-for the well visualization application. It provides methods for setting up the board matter graphic,
-updating board matter details, initializing combo boxes, and managing the display of relevant data
-based on user selections.
+This module implements the BoardMattersVisualizer class for handling board matter visualization and management
+in well visualization applications. It provides a comprehensive interface for processing, displaying, and
+interacting with board matter data through both section-based and general search capabilities.
 
-The class interacts with various data sources, including dataframes for board data, links, and township/range
-sections. It also interfaces with the main application's user interface (UI) components, such as combo boxes
-and tables, to display and manipulate board matter-related information.
+The class manages complex data relationships between board matters, geographical sections (township/range),
+and associated documentation. It provides an interactive interface through PyQt5 components for data
+visualization and manipulation.
+
+Key Features:
+- Dual-mode board matter search (section-based and general search)
+- Dynamic polygon generation for section visualization
+- Interactive data display with real-time updates
+- Integrated document management for board matter files
+- Automated UI state management
+- Efficient data filtering and processing
 
 Dependencies:
-- PyQt5
-- pandas
-- numpy
-- ModuleAgnostic (custom module)
+- PyQt5 (>= 5.15): UI components and models
+- pandas (>= 1.3): Data manipulation and filtering
+- numpy (>= 1.20): Numerical operations and polygon handling
+- ModuleAgnostic: Custom utility module
 
 Classes:
     BoardMattersVisualizer:
-        - Handles board matter-related data processing and visualization.
-        - Provides methods for setting up the board matter graphic, updating board matter details,
-          initializing combo boxes, and managing the display of relevant data.
-        - Interacts with the main application's user interface (UI) components.
+        Core class providing board matter visualization and management functionality:
+        - Data processing and filtering
+        - UI component management
+        - Polygon generation and visualization
+        - Document handling
+        - Search mode management
 
-Functions:
-    - setupBoardMattersGraphic()
-    - setupBoardModel()
-    - prodButtonsActivate()
-    - updateBoardMatterDetails()
-    - find_matching_rows()
-    - create_polygons()
-    - getTSRDataframe()
-    - initializeSectionsBoardComboBox()
-    - initializeAllBoardMattersComboBox()
+Primary Methods:
+    - setupBoardMattersGraphic(): Initializes board matter display for selected section
+    - setupBoardModel(): Configures data model for board matter display
+    - prodButtonsActivate(): Manages search mode transitions
+    - updateBoardMatterDetails(): Updates display with selected board matter data
+    - clear_board_matter_ui(): Resets UI state
+    - get_selected_cause_number(): Retrieves active cause number based on search mode
+    - get_board_matter_details(): Fetches comprehensive board matter information
+    - find_matching_rows(): Locates corresponding geographical data
+    - create_polygons(): Generates visualization polygons
+
+Note:
+This module is designed to be integrated into larger well visualization systems
+and requires proper initialization of UI components and data sources before use.
+The visualization system supports both interactive user input and programmatic
+control through its public interface.
 """
 
-from PyQt5.QtWidgets import QApplication, QTableView, QHeaderView, QAbstractItemView
+from PyQt5.QtWidgets import QHeaderView
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 import pandas as pd
 import numpy as np
 
-import ModuleAgnostic
 
 """The board matters process ended up taking a lot more development time so I branched it into a seperate class."""
 class BoardMattersVisualizer:
