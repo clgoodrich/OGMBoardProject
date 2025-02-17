@@ -2431,7 +2431,8 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
         """
         # Get well parameter data from current selection
         df_well_data: pd.DataFrame = self.df_docket.loc[self.dx_data['DisplayName'] == self.ui.well_lst_combobox.currentText()]
-
+        print(self.dx_data)
+        print(foo)
         # Filter directional survey data for selected well
         df_well: pd.DataFrame = self.dx_df[self.dx_df['APINumber'] == df_well_data['WellID'].iloc[0]]
 
@@ -4646,6 +4647,7 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
             return result.reset_index(drop=True).drop_duplicates(keep='first')
         # Clear existing checkboxes
+        print(self.operator_checkbox_list)
         for checkbox in self.operator_checkbox_list:
             checkbox.setParent(None)
         self.operator_checkbox_list.clear()
@@ -5471,6 +5473,7 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
 
         # Convert adjacency list to DataFrame
         self.df_adjacent_fields = pd.DataFrame(adjacent_fields)
+        print(self.df_adjacent_fields)
 
     def loadBoardData(self) -> None:
         """

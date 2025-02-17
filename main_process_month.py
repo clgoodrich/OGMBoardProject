@@ -1,0 +1,140 @@
+"""
+WellVisualizerMain.py
+Author: Colton Goodrich
+Date: 11/10/2024
+Python Version: 3.12
+This module is a PyQt5 application that provides a graphical user interface (GUI) for
+visualizing and analyzing well data, board matters, and related information from the
+State of Utah, Division of Oil, Gas, and Mining.
+
+The application features various functionalities, including:
+
+- Interactive visualization of well trajectories in both 2D and 3D views, including
+  planned, currently drilling, and completed wells
+- Real-time well path visualization with different line styles for different well states
+  (planned: dashed, drilling: solid, completed: solid)
+- Advanced filtering system for wells based on type (oil, gas, water disposal, dry hole,
+  injection) and status (shut-in, PA, producing, drilling)
+- Mineral ownership visualization with section-level detail and agency tracking
+- Dynamic operator filtering system with color-coded checkboxes and scrollable interfaces
+- Production data visualization with cumulative and time-series analysis
+- Field boundary and plat code visualization with centroid labeling
+- Interactive well selection system with detailed data display
+- Customizable visualization features including zoom, pan, and scale adjustment
+
+Classes:
+- MultiBoldRowDelegate: A custom delegate for applying bold formatting to specific rows
+  in Qt views, particularly useful for emphasizing important wells
+- BoldDelegate: A custom delegate for applying bold formatting to specific values in
+  Qt views
+- wellVisualizationProcess: The main application class that inherits from QMainWindow
+  and BoardMattersVisualizer, handling all core functionality
+
+Key Components:
+- Data Management: Utilizes Pandas, GeoPandas, and SQLite for efficient data handling
+- Visualization: Combines Matplotlib with PyQt5 for interactive plotting
+- Geospatial Processing: Integrates UTM and Shapely for coordinate transformations
+  and geometric operations
+- User Interface: Custom-designed PyQt5 interface with scrollable areas and
+  dynamic updates
+
+The module serves as a comprehensive tool for analyzing and visualizing well data,
+providing detailed insights into well operations, ownership, and regulatory matters
+for the State of Utah's Division of Oil, Gas, and Mining operations.
+
+Dependencies:
+- Core Scientific: numpy, pandas, geopandas
+- GUI Framework: PyQt5
+- Visualization: matplotlib
+- Geospatial: shapely, utm
+- Database: sqlite3, sqlalchemy
+- Utility: regex
+
+Note: This application requires specific data structures and database connectivity
+to function properly. See accompanying documentation for setup requirements.
+"""
+
+# Python standard library imports
+import itertools
+import os
+import sqlite3
+from datetime import datetime
+from typing import Callable, Dict, List, Literal, NoReturn, Optional, Set, Tuple, Union
+
+# Third-party imports - Core Data/Scientific
+import numpy as np
+from numpy import array, std
+import pandas as pd
+from pandas import DataFrame, concat, options, read_sql, set_option, to_datetime, to_numeric
+import geopandas as gpd
+import utm
+from sqlalchemy import create_engine
+
+# Third-party imports - PyQt5
+import PyQt5
+from PyQt5.QtCore import QAbstractItemModel, QModelIndex, Qt
+from PyQt5.QtGui import QColor, QStandardItem, QStandardItemModel
+from PyQt5.QtWidgets import (
+    QApplication, QCheckBox, QGraphicsDropShadowEffect, QHeaderView,
+    QHBoxLayout, QLabel, QLayout, QMainWindow, QScrollArea,
+    QStyledItemDelegate, QTableWidget, QTableWidgetItem,
+    QVBoxLayout, QWidget
+)
+
+# Third-party imports - Matplotlib
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.backend_bases import MouseEvent
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.collections import LineCollection, PatchCollection, PolyCollection
+from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
+from matplotlib.patches import PathPatch, Polygon
+from matplotlib.text import Text
+from matplotlib.textpath import TextPath
+from matplotlib.ticker import FuncFormatter, ScalarFormatter
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+# Third-party imports - Geospatial
+from shapely import wkt
+from shapely.geometry import Point, Polygon
+from shapely.ops import unary_union
+
+# Third-party imports - Other
+import regex as re
+
+# Local application imports
+from WellVisualizerBoardMatters import BoardMattersVisualizer
+from WellVisualizationUI import Ui_Dialog
+from main_process_board_matter import BoardMatter
+
+
+class Month:
+    def __init__(self, ui, month_name, df_month, df_dx):
+        super().__init__()
+        self.ui = ui
+        self.df_dx = df_dx
+        self.populate_board_matters_combo_box(df_month, month_name)
+        self.ui.board_matter_lst_combobox.activated.connect(lambda: self.do_this_when_board_matters_combo_box_pressed(df_month))
+
+
+        # self.well_data = df[df['Docket_Month'] == month_name]
+    def populate_board_matters_combo_box(self, df_month, month_name):
+        self.ui.board_matter_lst_combobox.clear()
+        self.ui.well_lst_combobox.clear()
+        board_matters: List[str] = df_month['Board_Docket'].unique()
+        model: QStandardItemModel = QStandardItemModel()
+
+        # Populate model with board matters
+        for board_matter in board_matters:
+            item: QStandardItem = QStandardItem(board_matter)
+            model.appendRow(item)
+
+        # Update board matters combo box with new model
+        self.ui.board_matter_lst_combobox.setModel(model)
+
+    def do_this_when_board_matters_combo_box_pressed(self, df_month):
+        board_matter: str = self.ui.board_matter_lst_combobox.currentText()
+        df_board_matters = df_month[df_month['Board_Docket'] == board_matter]
+        board_obj = BoardMatter(ui=self.ui, board_matter=board_matter, df_board_matters=df_board_matters, df_dx = self.df_dx)
