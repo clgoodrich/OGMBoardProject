@@ -110,10 +110,11 @@ from WellVisualizationUI import Ui_Dialog
 from main_process_month import Month
 
 class Year:
-    def __init__(self, ui, year, df_year, df_dx):
+    def __init__(self, ui, year, df_year, dx_df):
         super().__init__()
         self.ui = ui
-        self.df_dx = df_dx
+        self.dx_df = dx_df
+
         # df_year = df[df['Board_Year'] == year]
         self.populate_month_combo_box(df_year, year)
         self.ui.month_lst_combobox.activated.connect(lambda: self.do_this_when_month_combo_box_pressed(df_year))
@@ -123,8 +124,8 @@ class Year:
         self.ui.board_matter_lst_combobox.clear()
         self.ui.well_lst_combobox.clear()
         used_months: List[str] = well_data[
-                well_data['Board_Year'] == selected_year
-                ]['Docket_Month'].unique()
+                well_data['board_year'] == selected_year
+                ]['docket_month'].unique()
             # Create and populate model for month combo box
         model: QStandardItemModel = QStandardItemModel()
         for month in used_months:
@@ -136,25 +137,7 @@ class Year:
 
     def do_this_when_month_combo_box_pressed(self, df_year):
         selected_month: str = self.ui.month_lst_combobox.currentText()
-        df_month = df_year[df_year['Docket_Month'] == selected_month]
-        month_obj = Month(ui=self.ui, month_name=selected_month, df_month=df_month, df_dx = self.df_dx)
+        df_month = df_year[df_year['docket_month'] == selected_month]
+        month_obj = Month(ui=self.ui, month_name=selected_month, df_month=df_month, dx_df = self.dx_df)
 
 
-    # def when_year_combo_box_pressed_do_this(self, well_data):
-    #     selected_year: str = self.ui.year_lst_combobox.currentText()
-    #     # Filter and update class data members
-    #     used_months: List[str] = well_data[
-    #         well_data['Board_Year'] == selected_year
-    #         ]['Docket_Month'].unique()
-    #     df_year = well_data[well_data['Board_Year'] == selected_year]
-    #     # Create and populate model for month combo box
-    #     model: QStandardItemModel = QStandardItemModel()
-    #     for month in used_months:
-    #         print(month)
-    #         item: QStandardItem = QStandardItem(month)
-    #         model.appendRow(item)
-    #         self.months_dict[month] = Month(ui = self.ui, month_name = month, df = df_year)
-    #     # Update month combo box with new model
-    #     self.ui.month_lst_combobox.setModel(model)
-    #
-    # #

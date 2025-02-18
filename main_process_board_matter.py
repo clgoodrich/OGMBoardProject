@@ -168,27 +168,29 @@ class BoldDelegate(QStyledItemDelegate):
 
 
 class BoardMatter:
-    def __init__(self, ui, board_matter, df_board_matters, df_dx):
+    def __init__(self, ui, board_matter, df_board_matters, dx_df):
         super().__init__()
         self.ui = ui
-        self.df_dx = df_dx
+        self.dx_df = dx_df
         well_lst = self.create_well_lst(df_board_matters)
         self.populate_wells_combo_box(well_lst)
         self.make_wells_bold_in_combobox(df_board_matters)
-        used_df_dx = df_dx[df_dx['APINumber'].isin(df_board_matters['WellID'].unique())]
-        self.Drawer = Drawer(self.ui, used_df_dx, df_board_matters)
+        used_dx_df = dx_df[dx_df['apinumber'].isin(df_board_matters['well_id'].unique())]
+        used_dx_df = used_dx_df.drop_duplicates(keep='first')
+        print(used_dx_df)
+        self.Drawer = Drawer(self.ui, used_dx_df, df_board_matters)
         self.ui.well_lst_combobox.activated.connect(lambda: self.do_this_when_wells_combo_box_pressed(df_board_matters))
 
 
     def make_wells_bold_in_combobox(self, df):
-        masters_apds: List[str] = sorted(df[df['MainWell'] == 1]['DisplayName'].unique())
+        masters_apds: List[str] = sorted(df[df['main_well'] == 1]['display_name'].unique())
         delegate: QStyledItemDelegate = BoldDelegate(masters_apds)
         self.ui.well_lst_combobox.setItemDelegate(delegate)
 
     def create_well_lst(self, df):
-        unique_count: List[str] = sorted(df['DisplayName'].unique())
-        master_data: pd.DataFrame = df[df['MainWell'] == 1]
-        masters_apds: List[str] = sorted(master_data['DisplayName'].unique())
+        unique_count: List[str] = sorted(df['display_name'].unique())
+        master_data: pd.DataFrame = df[df['main_well'] == 1]
+        masters_apds: List[str] = sorted(master_data['display_name'].unique())
         sorted_list: List[str] = sorted([x for x in unique_count if x not in masters_apds])
         well_lst: List[str] = masters_apds + sorted_list
         return well_lst
@@ -203,5 +205,5 @@ class BoardMatter:
 
     def do_this_when_wells_combo_box_pressed(self, df):
         well_name: str = self.ui.well_lst_combobox.currentText()
-        well_obj = Well(ui=self.ui, well_name=well_name, df=df, df_dx = self.df_dx)
+        well_obj = Well(ui=self.ui, well_name=well_name, df=df, dx_df = self.dx_df)
 

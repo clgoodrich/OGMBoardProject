@@ -154,8 +154,8 @@ class wellVisualizationProcess(QMainWindow):
 
     def do_this_when_year_combo_box_pressed(self, well_df):
         selected_year: str = self.ui.year_lst_combobox.currentText()
-        df_year = well_df[well_df['Board_Year'] == selected_year]
-        year_obj = Year(ui=self.ui, year=selected_year, df_year=df_year, df_dx = self.dx_df)
+        df_year = well_df[well_df['board_year'] == selected_year]
+        year_obj = Year(ui=self.ui, year=selected_year, df_year=df_year, dx_df = self.dx_df)
 
 
     def load_data(self):
@@ -167,8 +167,8 @@ class wellVisualizationProcess(QMainWindow):
         df_plat, df_adjacent_plats = self.load_plat_data()
         well_data_unique_df, well_df = self.load_well_df_data()
         dx_df, df_shl = self.load_well_data(well_data_unique_df)
-        used_dockets = well_df['Board_Docket'].unique()
-        used_years = well_df['Board_Year'].unique()
+        used_dockets = well_df['board_docket'].unique()
+        used_years = well_df['board_year'].unique()
         df_prod = read_sql('select * from Production', self.conn_db)
         df_prod.drop_duplicates(keep='first', inplace=True)
 
@@ -191,22 +191,21 @@ class wellVisualizationProcess(QMainWindow):
     def load_df_fields(self, df_field):
         # Initialize storage for adjacent field relationships
         adjacent_fields: List[Dict[str, str]] = []
-
         # Create point geometries for field locations
         df_field['geometry'] = df_field.apply(
-            lambda row: Point(row['Easting'], row['Northing']),
+            lambda row: Point(row['easting'], row['northing']),
             axis=1
         )
 
         # Extract relevant fields for polygon creation
-        used_fields = df_field[['Field_Name', 'Easting', 'Northing']]
+        used_fields = df_field[['field_name', 'easting', 'northing']]
 
         # Generate field polygons from coordinate groups
-        polygons = used_fields.groupby('Field_Name').apply(
-            lambda x: Polygon(zip(x['Easting'], x['Northing'])),
+        polygons = used_fields.groupby('field_name').apply(
+            lambda x: Polygon(zip(x['easting'], x['northing'])),
             include_groups=False
         ).reset_index()
-        polygons.columns = ['Field_Name', 'geometry']
+        polygons.columns = ['field_name', 'geometry']
 
         # Create GeoDataFrame with buffer zones
         gdf = gpd.GeoDataFrame(polygons, geometry='geometry')
@@ -215,12 +214,12 @@ class wellVisualizationProcess(QMainWindow):
         # Identify adjacent fields using spatial analysis
         for _, row in gdf.iterrows():
             # Find neighboring fields using buffer intersection
-            neighbors = gdf[gdf['buffer'].intersects(row['geometry'])]['Field_Name'].tolist()
-            neighbors.remove(row['Field_Name'])  # Remove self-reference
+            neighbors = gdf[gdf['buffer'].intersects(row['geometry'])]['field_name'].tolist()
+            neighbors.remove(row['field_name'])  # Remove self-reference
 
             # Create adjacency relationships
             adjacent_fields.extend([
-                {'Field_Name': row['Field_Name'], 'adjacent_Field_Name': neighbor}
+                {'field_name': row['field_name'], 'adjacent_Field_Name': neighbor}
                 for neighbor in neighbors
             ])
         columns = [k for k,v in adjacent_fields[0].items()]
@@ -253,9 +252,9 @@ class wellVisualizationProcess(QMainWindow):
         df_board_data_links = read_sql('select * from BoardDataLinks', self.conn_db)
 
         # Generate concatenated location codes using ModuleAgnostic translator
-        df_board_data['Conc'] = df_board_data[[
-            'Sec', 'Township', 'TownshipDir',
-            'Range', 'RangeDir', 'PM'
+        df_board_data['conc'] = df_board_data[[
+            'sec', 'township', 'township_dir',
+            'range', 'range_dir', 'pm'
         ]].apply(lambda x: conc_code_maker(x), axis=1)
         return df_board_data, df_board_data_links
 
@@ -266,15 +265,15 @@ class wellVisualizationProcess(QMainWindow):
 
         # Clean plat data by removing duplicates and invalid coordinates
         df_plat.drop_duplicates(keep='first', inplace=True)
-        df_plat = df_plat.dropna(subset=['Lat', 'Lon'])
+        df_plat = df_plat.dropna(subset=['lat', 'lon'])
 
         # Convert geographic coordinates (Lat/Lon) to UTM projection (Easting/Northing)
-        df_plat['Easting'], df_plat['Northing'] = zip(
-            *df_plat.apply(lambda row: utm.from_latlon(row['Lat'], row['Lon'])[:2], axis=1))
+        df_plat['easting'], df_plat['northing'] = zip(
+            *df_plat.apply(lambda row: utm.from_latlon(row['lat'], row['lon'])[:2], axis=1))
 
         # Create Shapely Point geometries for spatial analysis
         df_plat['geometry'] = df_plat.apply(
-            lambda row: Point(row['Easting'], row['Northing']),
+            lambda row: Point(row['easting'], row['northing']),
             axis=1)
         return df_plat, df_adjacent_plats
     
@@ -347,31 +346,31 @@ class wellVisualizationProcess(QMainWindow):
         well_df = well_df.rename(columns={'entityname': 'Operator'})
 
         # Remove plugged wells and duplicates
-        well_df = well_df[well_df['WorkType'] != 'PLUG']
+        well_df = well_df[well_df['work_type'] != 'PLUG']
         well_df.drop_duplicates(keep='first', inplace=True)
 
         # Create display names for wells
-        well_df['DisplayName'] = well_df['WellID'].astype(str) + ' - ' + well_df['WellName'].astype(str)
+        well_df['display_name'] = well_df['well_id'].astype(str) + ' - ' + well_df['well_name'].astype(str)
         # Process dates and calculate well age
-        well_df['DrySpud'] = to_datetime(well_df['DrySpud'])
-        well_df['WellAge'] = (datetime.now().year - well_df['DrySpud'].dt.year) * 12 + datetime.now().month - \
-                                  well_df['DrySpud'].dt.month
-        well_df['DrySpud'] = well_df['DrySpud'].dt.strftime('%Y-%m-%d')
+        well_df['dry_spud'] = to_datetime(well_df['dry_spud'])
+        well_df['well_age'] = (datetime.now().year - well_df['dry_spud'].dt.year) * 12 + datetime.now().month - \
+                                  well_df['dry_spud'].dt.month
+        well_df['dry_spud'] = well_df['dry_spud'].dt.strftime('%Y-%m-%d')
 
         # Set well age to 0 for approved permits without spud dates
-        condition = pd.isna(well_df['WellAge']) & (well_df['CurrentWellStatus'] == 'Approved Permit')
-        well_df.loc[condition, 'WellAge'] = 0
+        condition = pd.isna(well_df['well_age']) & (well_df['current_well_status'] == 'Approved Permit')
+        well_df.loc[condition, 'well_age'] = 0
 
         # Sort by month and year
-        well_df['month_order'] = well_df['Docket_Month'].map(month_dict)
-        df_sorted = well_df.sort_values(by=['Board_Year', 'month_order'])
+        well_df['month_order'] = well_df['docket_month'].map(month_dict)
+        df_sorted = well_df.sort_values(by=['board_year', 'month_order'])
         well_df = df_sorted.drop('month_order', axis=1)
 
         # Standardize field names
-        well_df['FieldName'] = well_df['FieldName'].map(translated_fields)
+        well_df['field_name'] = well_df['field_name'].map(translated_fields)
 
         # Return unique wells only
-        well_data_unique_df = well_df.drop_duplicates(subset=['WellID'])
+        well_data_unique_df = well_df.drop_duplicates(subset=['well_id'])
         return well_data_unique_df, well_df
 
     def load_well_data(self, well_data_unique_df: DataFrame):
@@ -405,37 +404,37 @@ class wellVisualizationProcess(QMainWindow):
         # Merge directional survey data with well-specific information
         dx_df = pd.merge(
             dx_df,
-            well_data_unique_df[['WellID', 'Elevation', 'FieldName', 'Mineral Lease', 'ConcCode']],
+            well_data_unique_df[['well_id', 'elevation', 'field_name', 'mineral_lease', 'conc_code']],
             how='left',
-            left_on='APINumber',
-            right_on='WellID'
+            left_on='apinumber',
+            right_on='well_id'
         )
 
         # Convert coordinate columns to float type
-        dx_df['X'] = dx_df['X'].astype(float)
-        dx_df['Y'] = dx_df['Y'].astype(float)
+        dx_df['x'] = dx_df['x'].astype(float)
+        dx_df['y'] = dx_df['y'].astype(float)
 
         # Calculate true elevation relative to well head elevation
-        dx_df['TrueElevation'] = dx_df['Elevation'] - to_numeric(dx_df['TrueVerticalDepth'],
+        dx_df['true_elevation'] = dx_df['elevation'] - to_numeric(dx_df['true_vertical_depth'],
                                                                            errors='coerce')
-        dx_df['MeasuredDepth'] = to_numeric(dx_df['MeasuredDepth'], errors='coerce')
+        dx_df['measured_depth'] = to_numeric(dx_df['measured_depth'], errors='coerce')
 
         # Standardize citing type to lowercase
-        dx_df['CitingType'] = dx_df['CitingType'].str.lower()
+        dx_df['citing_type'] = dx_df['citing_type'].str.lower()
 
         # Adjust Y coordinates for vertical wells to create valid linestrings
         # Adds small incremental offset (0.001) to Y coordinate for each point
-        dx_df.loc[dx_df['CitingType'] == 'vertical', 'Y'] += dx_df.groupby(['X', 'Y']).cumcount() * 1e-3
+        dx_df.loc[dx_df['citing_type'] == 'vertical', 'y'] += dx_df.groupby(['x', 'y']).cumcount() * 1e-3
 
         # Convert coordinates to state plane (meters to feet)
-        dx_df['SPX'] = dx_df['X'].astype(float) / 0.3048  # Convert meters to feet
-        dx_df['SPY'] = dx_df['Y'].astype(float) / 0.3048  # Convert meters to feet
+        dx_df['spx'] = dx_df['x'].astype(float) / 0.3048  # Convert meters to feet
+        dx_df['spx'] = dx_df['y'].astype(float) / 0.3048  # Convert meters to feet
 
         # Sort data by well ID and measured depth
-        dx_df = dx_df.sort_values(by=['WellID', 'MeasuredDepth'])
+        dx_df = dx_df.sort_values(by=['well_id', 'measured_depth'])
 
         # Create surface hole location DataFrame from first point of each well
-        df_shl = dx_df.groupby('WellID').first().reset_index()
+        df_shl = dx_df.groupby('well_id').first().reset_index()
         return dx_df, df_shl
 
     def setup_tables(self) -> None:

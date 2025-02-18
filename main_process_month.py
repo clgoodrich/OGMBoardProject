@@ -111,19 +111,17 @@ from main_process_board_matter import BoardMatter
 
 
 class Month:
-    def __init__(self, ui, month_name, df_month, df_dx):
+    def __init__(self, ui, month_name, df_month, dx_df):
         super().__init__()
         self.ui = ui
-        self.df_dx = df_dx
+        self.dx_df = dx_df
         self.populate_board_matters_combo_box(df_month, month_name)
         self.ui.board_matter_lst_combobox.activated.connect(lambda: self.do_this_when_board_matters_combo_box_pressed(df_month))
 
-
-        # self.well_data = df[df['Docket_Month'] == month_name]
     def populate_board_matters_combo_box(self, df_month, month_name):
         self.ui.board_matter_lst_combobox.clear()
         self.ui.well_lst_combobox.clear()
-        board_matters: List[str] = df_month['Board_Docket'].unique()
+        board_matters: List[str] = df_month['board_docket'].unique()
         model: QStandardItemModel = QStandardItemModel()
 
         # Populate model with board matters
@@ -136,5 +134,5 @@ class Month:
 
     def do_this_when_board_matters_combo_box_pressed(self, df_month):
         board_matter: str = self.ui.board_matter_lst_combobox.currentText()
-        df_board_matters = df_month[df_month['Board_Docket'] == board_matter]
-        board_obj = BoardMatter(ui=self.ui, board_matter=board_matter, df_board_matters=df_board_matters, df_dx = self.df_dx)
+        df_board_matters = df_month[df_month['board_docket'] == board_matter]
+        board_obj = BoardMatter(ui=self.ui, board_matter=board_matter, df_board_matters=df_board_matters, dx_df = self.dx_df)

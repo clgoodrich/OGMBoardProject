@@ -163,8 +163,7 @@ class Well:
     def __init__(self, ui, well_name, df, df_dx):
         super().__init__()
         self.ui = ui
-        # print(well_name)
-        well_df = df[df['DisplayName']==well_name]
+        well_df = df[df['display_name']==well_name]
         self.df_dx = df_dx
         self.specific_well_data_model = QStandardItemModel()
         self.ui.well_data_table_view.setModel(self.specific_well_data_model)
@@ -174,26 +173,26 @@ class Well:
     def update_data_on_well_change(self, df):
         # Handle multiple records by selecting most recent
         if len(df) > 1:
-            current_data_row = df.sort_values(by='APDApprovedDate', ascending=False).head(1)
+            current_data_row = df.sort_values(by='apdapproved_date', ascending=False).head(1)
 
         # Define data fields for each table
-        row_1_data: List[str] = ['WellID', 'WellName', 'SideTrack', 'CurrentWellStatus', 'CurrentWellType',
-                                 'APDReceivedDate', 'APDReturnDate', 'APDApprovedDate', 'APDExtDate',
-                                 'APDRescindDate', 'DrySpud', 'RotarySpud']
+        row_1_data: List[str] = ['well_id', 'well_name', 'side_track', 'current_well_status', 'current_well_type',
+                                 'apdreceived_date', 'apdreturn_date', 'apdapproved_date', 'apdext_date',
+                                 'apdrescind_date', 'dry_spud', 'rotary_spud']
 
-        row_2_data: List[str] = ['WellStatusReport', 'WellTypeReport', 'FirstProdDate', 'WCRCompletionDate',
-                                 'TestDate', 'ProductionMethod', 'OilRate', 'GasRate', 'WaterRate', 'DST',
-                                 'DirSurveyRun', 'CompletionType']
+        row_2_data: List[str] = ['well_status_report', 'well_type_report', 'first_prod_date', 'wcrcompletion_date',
+                                 'test_date', 'production_method', 'oil_rate', 'gas_rate', 'water_rate', 'dst',
+                                 'dir_survey_run', 'completion_type']
 
-        row_3_data: List[str] = ['GasVolume', 'OilVolume', 'WellAge', 'Last Production (if Shut In)',
-                                 'Months Shut In', 'Operator', 'MD', 'TVD', 'Perforation MD',
-                                 'Perforation TVD', 'WorkType', 'Slant']
-
+        row_3_data: List[str] = ['gas_volume', 'oil_volume', 'well_age', 'last_production_if_shut_in',
+                                 'months_shut_in', 'operator', 'md', 'tvd', 'perforation_md',
+                                 'perforation_tvd', 'work_type', 'slant']
         # Setup table structure
         self.setup_table_data([row_1_data, row_2_data, row_3_data], df)
 
         # Populate each table with corresponding data
         for i, value in enumerate(row_1_data):
+            print(df[value])
             self.ui.well_data_table_1.item(0, i).setText(str(df[value].item()))
 
         for i, value in enumerate(row_2_data):
@@ -210,13 +209,12 @@ class Well:
 
         # Clear existing table data
         # Define modified headers for the third row
-        row_3_data_edited: List[str] = ['GasVolume', 'OilVolume', 'WellAge', 'Recorded Last Production',
-            'Months Shut In (if applicable)', 'Operator', 'MD', 'TVD',
-            'Perforation MD', 'Perforation TVD', 'WorkType', 'Slant']
+        row_3_data_edited: List[str] = ['gas_volume', 'oil_volume', 'well_age', 'last_production_if_shut_in',
+            'months_shut_in', 'operator', 'md', 'tvd',
+            'perforation_md', 'perforation_tvd', 'work_type', 'slant']
 
         # Initialize data structure for table population
         data_used_lst: List[List[str]] = [row_data[0], [], row_data[1], [], row_3_data_edited, []]
-
         # Populate data rows from DataFrame
         for i, value in enumerate(row_data[0]):
             data_used_lst[1].append(str(df[value].values[0]))

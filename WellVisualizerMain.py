@@ -2886,6 +2886,8 @@ class wellVisualizationProcess(QMainWindow, BoardMattersVisualizer):
             >>> drilling_wells = self.df_docket_data[drilling]
         """
         # Generate mask for drilled/completed wells
+        print('df_docket_data')
+        print(self.df_docket_data)
         mask_drilled = self.df_docket_data['CitingType'].isin(['asdrilled', 'vertical'])
 
         # Generate mask for planned/permitted wells
